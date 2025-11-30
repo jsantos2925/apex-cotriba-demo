@@ -5,12 +5,12 @@ import { getFirestore, collection, onSnapshot, query, orderBy, limit, addDoc, se
 import { 
     Home, Package, MessageCircle, Wallet, User, LogOut, Loader, Camera, Send, 
     AlertTriangle, MapPin, Search, ShieldCheck, ShoppingCart, FileText, Truck, Cloud,
-    CreditCard, Wind, Droplets, CheckCircle, Tractor, Sprout, Clock, Trash2, Menu, 
+    CreditCard, Wind, Droplets, CheckCircle, Tractor, Sprout, Clock, Trash2, Menu, X, // <--- O X ESTÁ AQUI AGORA
     BarChart3, Activity, ShoppingBag, Megaphone, ArrowRightLeft, Filter,
     Lock, Mail, FileSignature, QrCode, Gavel, Scale, ScanEye, Users, Siren, PieChart, LineChart,
     Hash, Download, BoxSelect, Wrench, Split, Landmark, FileUp, RefreshCw, Check, Newspaper, 
     Bell, Database, Layers, Coffee, Wheat, ChevronDown, Smartphone, UserCheck, PlusCircle, 
-    LockKeyhole, Pill, Banknote, Milk, Users2, HardHat, ScanFace, ShieldAlert, MessageSquare, Navigation, FileBarChart, PackageCheck, History, AlertCircle, Calendar,Mic, Paperclip, Image as ImageIcon, Video, XCircle
+    LockKeyhole, Pill, Banknote, Milk, Users2, HardHat, ScanFace, ShieldAlert, MessageSquare, Navigation, FileBarChart, PackageCheck, History, AlertCircle, Calendar, Briefcase
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { twMerge } from 'tailwind-merge';
@@ -986,7 +986,8 @@ const LoginScreen = ({ onLogin, loading, error }) => {
 const Dashboard = ({ user, role, currentTenant, onChangeTenant, onLogout, marketProducts, setMarketProducts }) => {
     const [view, setView] = useState('home');
     const [activeBranch, setActiveBranch] = useState(currentTenant.branches[0]);
-    const [showMobileMenu, setShowMobileMenu] = useState(false); // Controle do Menu Mobile
+    const [showMobileMenu, setShowMobileMenu] = useState(false); // Estado do Menu
+    const [chatContext, setChatContext] = useState(null);
     const Logo = currentTenant.logo;
 
     const menu = [
@@ -1020,14 +1021,13 @@ const Dashboard = ({ user, role, currentTenant, onChangeTenant, onLogout, market
         <div className={`min-h-screen bg-gradient-to-br ${currentTenant.colors.gradient} text-white font-sans flex transition-all duration-1000`}>
             <div className="fixed inset-0 z-0 pointer-events-none"><img src={currentTenant.bg_image} className="absolute inset-0 w-full h-full object-cover opacity-20" alt="bg"/><div className="absolute inset-0 bg-black/60"/><div className="absolute bottom-8 right-8 opacity-10"><Logo size={400}/></div></div>
             
-            {/* Sidebar Desktop */}
+            {/* SIDEBAR (DESKTOP) */}
             <aside className={`w-20 ${currentTenant.colors.sidebar} border-r border-white/10 flex flex-col items-center py-6 gap-6 hidden md:flex relative z-20 backdrop-blur-xl`}>
                 <div className={`p-3 bg-white/10 rounded-xl ${currentTenant.colors.primary.replace('bg-', 'text-')}`}><Logo size={28}/></div>
-                <nav className="flex-1 flex flex-col gap-4 w-full px-2">{menu.map(item => (<button key={item.id} onClick={() => setView(item.id)} className={twMerge("p-3 rounded-xl transition-all flex justify-center group relative", view === item.id ? "bg-white/20 text-white" : "text-white/40 hover:text-white hover:bg-white/5")} title={item.label}><item.icon size={22}/></button>))}</nav>
-                <button onClick={onLogout} className="p-3 text-white/30 hover:text-red-400 transition"><LogOut size={22}/></button>
+                <nav className="flex-1 flex flex-col gap-4 w-full px-2">{menu.map(item => (<button key={item.id} onClick={() => setView(item.id)} className={twMerge("p-3 rounded-xl transition-all flex justify-center group relative", view === item.id ? "bg-white/20 text-white" : "text-white/40 hover:text-white hover:bg-white/5")} title={item.label}><item.icon size={22}/></button>))}</nav><button onClick={onLogout} className="p-3 text-white/30 hover:text-red-400 transition"><LogOut size={22}/></button>
             </aside>
 
-            {/* Conteúdo Principal */}
+            {/* ÁREA PRINCIPAL */}
             <main className="flex-1 flex flex-col h-screen overflow-hidden relative z-10">
                 <header className="h-16 border-b border-white/10 flex items-center justify-between px-6 bg-black/20 backdrop-blur-md z-20">
                     <div className="flex items-center gap-4">
@@ -1038,13 +1038,14 @@ const Dashboard = ({ user, role, currentTenant, onChangeTenant, onLogout, market
                     <div className="flex items-center gap-4"><div className={`h-8 w-8 rounded-full ${currentTenant.colors.accent_bg} flex items-center justify-center font-bold text-xs text-black shadow-lg`}>{role.substring(0,2).toUpperCase()}</div></div>
                 </header>
                 
-                <div className="flex-1 overflow-y-auto p-6 pb-24"> 
+                {/* CONTEÚDO ROLÁVEL COM PADDING PARA O MENU MOBILE */}
+                <div className="flex-1 overflow-y-auto p-6 pb-24">
                     <AnimatePresence mode="wait">
                         <motion.div key={view + activeBranch} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }}>
                             {view === 'home' && <SmartHome role={role} setView={setView} branchData={branchData} />}
                             {view === 'estoque' && <EstoqueView userId={user.uid} inventory={[]} role={role} activeBranch={activeBranch} />}
-                            {view === 'agrilens' && <AgriLensView setView={setView}/>}
-                            {view === 'marketplace' && <MarketplaceView goToChat={() => setView('chat')} role={role} products={marketProducts} setView={setView}/>}
+                            {view === 'agrilens' && <AgriLensView setView={setView} setChatContext={setChatContext}/>}
+                            {view === 'marketplace' && <MarketplaceView goToChat={() => setView('chat')} role={role} products={marketProducts} setView={setView} setChatContext={setChatContext}/>}
                             {view === 'trading' && <TradingView role={role}/>}
                             {view === 'expedicao' && <ExpedicaoView />}
                             {view === 'logistica' && <LogisticaView />}
@@ -1053,7 +1054,7 @@ const Dashboard = ({ user, role, currentTenant, onChangeTenant, onLogout, market
                             {view === 'cobranca' && <CobreancaView />}
                             {view === 'grains' && <GrainWalletView />}
                             {view === 'comunidade' && <CommunityView userEmail={user.email} />}
-                            {view === 'chat' && <ChatModule title="Suporte Técnico" subtitle="Online agora" />}
+                            {view === 'chat' && <ChatModule title="Suporte Técnico" subtitle="Online agora" userEmail={user.email} role={role} chatContext={chatContext} setChatContext={setChatContext}/>}
                             {view === 'team_chat' && <ChatModule title="Chat Interno" subtitle="Equipe" />}
                             {view === 'receituario' && <ReceituarioView />}
                             {view === 'pool' && <PoolView />}
@@ -1067,18 +1068,21 @@ const Dashboard = ({ user, role, currentTenant, onChangeTenant, onLogout, market
                 </div>
             </main>
 
-            {/* --- MENU MOBILE (GAVETA QUE SOBE) --- */}
+            {/* --- GAVETA DE MENU MOBILE (CORRIGIDA) --- */}
             <AnimatePresence>
                 {showMobileMenu && (
                     <motion.div 
-                        initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                        className="md:hidden fixed inset-0 z-[60] bg-black/95 backdrop-blur-xl pt-10 px-6 pb-24 overflow-y-auto"
+                        initial={{ y: "100%" }} 
+                        animate={{ y: 0 }} 
+                        exit={{ y: "100%" }} 
+                        transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                        className="md:hidden fixed inset-0 z-[60] bg-black/95 backdrop-blur-xl pt-6 px-6 pb-24 overflow-y-auto flex flex-col"
                     >
-                        <div className="flex justify-between items-center mb-6">
+                        <div className="flex justify-between items-center mb-6 border-b border-white/10 pb-4">
                             <h2 className="text-2xl font-bold text-white">Menu Completo</h2>
-                            <button onClick={() => setShowMobileMenu(false)} className="p-2 bg-white/10 rounded-full text-white"><X size={24}/></button>
+                            <button onClick={() => setShowMobileMenu(false)} className="p-2 bg-white/10 rounded-full text-white hover:bg-white/20"><X size={24}/></button>
                         </div>
-                        <div className="grid grid-cols-3 gap-4">
+                        <div className="grid grid-cols-3 gap-4 pb-4">
                             {menu.map(item => (
                                 <button key={item.id} onClick={() => { setView(item.id); setShowMobileMenu(false); }} className={`flex flex-col items-center gap-2 p-3 rounded-xl border ${view === item.id ? 'bg-white/10 border-yellow-500/50 text-yellow-400' : 'bg-white/5 border-transparent text-white/50'}`}>
                                     <item.icon size={24}/>
@@ -1095,14 +1099,14 @@ const Dashboard = ({ user, role, currentTenant, onChangeTenant, onLogout, market
             </AnimatePresence>
 
             {/* --- BARRA INFERIOR (DOCK) --- */}
-            <div className="md:hidden fixed bottom-0 w-full bg-[#002851]/95 backdrop-blur-xl border-t border-white/10 p-2 flex justify-around items-center z-50 pb-6 safe-area-bottom">
-                {/* Mostra os 4 primeiros itens do menu */}
+            <div className="md:hidden fixed bottom-0 w-full bg-[#002851] border-t border-white/10 p-2 flex justify-around items-center z-50 pb-6 safe-area-bottom">
+                {/* 4 Ícones Principais */}
                 {menu.slice(0, 4).map(item => (
                     <button key={item.id} onClick={() => { setView(item.id); setShowMobileMenu(false); }} className={twMerge("p-3 rounded-xl transition", view === item.id ? "text-yellow-400 bg-white/10" : "text-white/50")}>
                         <item.icon size={24}/>
                     </button>
                 ))}
-                {/* Botão "Mais" que abre a gaveta */}
+                {/* Botão Menu (Abre a Gaveta) */}
                 <button onClick={() => setShowMobileMenu(true)} className={twMerge("p-3 rounded-xl transition text-white/50", showMobileMenu && "text-yellow-400 bg-white/10")}>
                     <Menu size={24}/>
                 </button>
