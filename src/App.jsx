@@ -5,12 +5,12 @@ import { getFirestore, collection, onSnapshot, query, orderBy, limit, addDoc, se
 import { 
     Home, Package, MessageCircle, Wallet, User, LogOut, Loader, Camera, Send, 
     AlertTriangle, MapPin, Search, ShieldCheck, ShoppingCart, FileText, Truck, Cloud,
-    CreditCard, Wind, Droplets, CheckCircle, Tractor, Sprout, Clock, Trash2, Menu, X, // <--- O X ESTÁ AQUI AGORA
+    CreditCard, Wind, Droplets, CheckCircle, Tractor, Sprout, Clock, Trash2, Menu, 
     BarChart3, Activity, ShoppingBag, Megaphone, ArrowRightLeft, Filter,
     Lock, Mail, FileSignature, QrCode, Gavel, Scale, ScanEye, Users, Siren, PieChart, LineChart,
     Hash, Download, BoxSelect, Wrench, Split, Landmark, FileUp, RefreshCw, Check, Newspaper, 
     Bell, Database, Layers, Coffee, Wheat, ChevronDown, Smartphone, UserCheck, PlusCircle, 
-    LockKeyhole, Pill, Banknote, Milk, Users2, HardHat, ScanFace, ShieldAlert, MessageSquare, Navigation, FileBarChart, PackageCheck, History, AlertCircle, Calendar, Briefcase
+    LockKeyhole, Pill, Banknote, Milk, Users2, HardHat, ScanFace, ShieldAlert, MessageSquare, Navigation, FileBarChart, PackageCheck, History, AlertCircle, Calendar, Briefcase, Sparkles, ArrowRight, X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { twMerge } from 'tailwind-merge';
@@ -507,14 +507,364 @@ const ChatModule = ({ title, subtitle, userEmail }) => {
     );
 };
 
-const SafetyView = ({ setView, role }) => {
-    const [step, setStep] = useState('menu'); const [biometry, setBiometry] = useState(false); const fileRef = useRef(null);
+// 3. MÓDULO DE SEGURANÇA DO TRABALHO (EHS - COMPLETO COM ESTOQUE)
+const SafetyView = ({ setView, role, activeBranch }) => {
+    const [activeTab, setActiveTab] = useState('dashboard'); 
+    const [showRiskModal, setShowRiskModal] = useState(false);
+    const [biometryStatus, setBiometryStatus] = useState('idle'); 
+    const fileRef = useRef(null);
+
+    // --- DADOS DE ESTOQUE DE SEGURANÇA (POR UNIDADE) ---
+    const SAFETY_WAREHOUSE = [
+        // São Francisco de Assis
+        { id: 1, name: "Luva de Raspa", type: "EPI", qtd: 45, min: 50, branch: "São Francisco de Assis", status: "Baixo" },
+        { id: 2, name: "Máscara PFF2", type: "EPI", qtd: 200, min: 100, branch: "São Francisco de Assis", status: "Ok" },
+        { id: 3, name: "Detector de Gases (4 gases)", type: "Ferramenta", qtd: 2, min: 2, branch: "São Francisco de Assis", status: "Ok" },
+        { id: 4, name: "Trava Quedas Retrátil", type: "Ferramenta", qtd: 4, min: 5, branch: "São Francisco de Assis", status: "Atenção" },
+        
+        // São Gabriel
+        { id: 5, name: "Luva de Raspa", type: "EPI", qtd: 120, min: 50, branch: "São Gabriel", status: "Ok" },
+        { id: 6, name: "Capacete Aba Frontal", type: "EPI", qtd: 15, min: 20, branch: "São Gabriel", status: "Baixo" },
+        { id: 7, name: "Kit Bloqueio/Etiquetagem", type: "Ferramenta", qtd: 1, min: 3, branch: "São Gabriel", status: "Crítico" },
+
+        // Ibirubá
+        { id: 8, name: "Botina de Segurança", type: "EPI", qtd: 300, min: 100, branch: "Ibirubá (Matriz)", status: "Ok" }
+    ];
+
+    // --- DADOS GERAIS ---
+    const allTrainings = [
+        { id: 1, name: "Carlos Mendes", role: "Operador", branch: "São Francisco de Assis", course: "NR-33 (Espaço Confinado)", expire: "10/06/2026", status: "Vigente" },
+        { id: 2, name: "Roberto Alves", role: "Manutenção", branch: "São Francisco de Assis", course: "NR-35 (Trabalho em Altura)", expire: "01/11/2023", status: "Vencido" },
+        { id: 3, name: "Ana Paula", role: "Supervisora", branch: "São Gabriel", course: "NR-10 (Elétrica)", expire: "15/12/2025", status: "Vigente" },
+        { id: 4, name: "João Silva", role: "Auxiliar", branch: "Ibirubá (Matriz)", course: "NR-33 (Espaço Confinado)", expire: "20/11/2023", status: "Vencido" }
+    ];
+
+    const allPETs = [
+        { id: 901, local: "Silo 03 (Subsolo)", type: "Espaço Confinado", worker: "Carlos Mendes", start: "14:00", max_end: "15:00", branch: "São Francisco de Assis", risk: "Alto" },
+        { id: 902, local: "Telhado Armazém B", type: "Trabalho em Altura", worker: "Equipe Tercerizada", start: "08:00", max_end: "17:00", branch: "São Gabriel", risk: "Médio" }
+    ];
+
+    const riskAreas = [
+        { id: 'R1', area: "Galpão de Químicos", risk: "Químico/Inflamável", class: "Zona 1", branch: "São Francisco de Assis" },
+        { id: 'R2', area: "Moega de Recebimento", risk: "Ruído/Poeira", class: "Zona 2", branch: "São Francisco de Assis" },
+        { id: 'R3', area: "Tanque Diesel", risk: "Explosão", class: "Zona 0", branch: "São Gabriel" }
+    ];
+
+    // --- FILTROS INTELIGENTES (POR FILIAL) ---
+    const currentStock = activeBranch.includes("Visão") ? SAFETY_WAREHOUSE : SAFETY_WAREHOUSE.filter(i => i.branch === activeBranch);
+    const currentTrainings = activeBranch.includes("Visão") ? allTrainings : allTrainings.filter(t => t.branch === activeBranch);
+    const currentPETs = activeBranch.includes("Visão") ? allPETs : allPETs.filter(p => p.branch === activeBranch);
+    const currentRisks = activeBranch.includes("Visão") ? riskAreas : riskAreas.filter(r => r.branch === activeBranch);
+
+    // --- FUNÇÕES ---
     const handleBiometry = () => fileRef.current.click();
-    const processBiometry = async () => { setBiometry('processing'); await new Promise(r => setTimeout(r, 2000)); setBiometry('success'); setTimeout(() => { alert(step === 'entrega' ? "✅ EPI Entregue!" : "✅ PET Aberta!"); setStep('menu'); setBiometry(false); }, 1500); };
-    const openSafetyChat = () => { const alvo = prompt("1. Ricardo\n2. Supervisor"); if(alvo) setView('chat'); };
-    if (biometry === 'processing') return <div className="flex flex-col items-center justify-center h-96 animate-in fade-in"><ScanFace size={64} className="text-blue-400 animate-pulse"/><h3 className="text-2xl font-bold text-white mt-4">Validando Biometria...</h3></div>;
-    if (step === 'entrega') return (<div className="space-y-6 animate-in fade-in"><h2 className="text-2xl font-bold text-white flex items-center gap-2"><HardHat/> EPIs</h2>{EPI_STOCK.map(e=><GlassCard key={e.id} className="flex justify-between items-center p-4"><div><h4 className="font-bold text-white">{e.name}</h4><p className="text-xs text-white/50">{e.validade}</p></div><NeonButton onClick={handleBiometry} variant="secondary" className="h-8 text-xs">Entregar</NeonButton></GlassCard>)}<button onClick={()=>setStep('menu')} className="w-full text-white/50 py-4">Voltar</button><input type="file" ref={fileRef} hidden onChange={processBiometry} accept="image/*;capture=user"/></div>);
-    return (<div className="space-y-6 animate-in fade-in"><h2 className="text-3xl font-bold text-white flex items-center gap-2"><ShieldCheck className="text-green-400"/> Segurança</h2>{role === 'Téc. Segurança' && <div className="grid grid-cols-2 gap-4 mb-4"><button onClick={openSafetyChat} className="p-4 rounded-2xl bg-red-600/20 border border-red-500/30 flex flex-col items-center gap-2 hover:bg-red-600/30 transition"><ShieldAlert className="text-red-400" size={32}/><span className="text-white font-bold text-sm">Alerta</span></button><button onClick={()=>setStep('entrega')} className="p-4 rounded-2xl bg-blue-600/20 border border-blue-500/30 flex flex-col items-center gap-2"><HardHat className="text-blue-400" size={32}/><span className="text-white font-bold text-sm">EPIs</span></button></div>}<div className="grid grid-cols-1 md:grid-cols-2 gap-4"><button onClick={()=>setStep('entrega')} className="p-6 rounded-2xl bg-gradient-to-br from-slate-800 to-slate-900 border border-white/10 hover:border-blue-500/50 text-left group"><HardHat size={32} className="text-blue-400 mb-3"/><h4 className="font-bold text-white">Controle de EPI</h4><p className="text-xs text-white/40">Biometria Facial</p></button></div></div>);
+    const confirmBiometry = () => {
+        setBiometryStatus('scanning');
+        setTimeout(() => {
+            setBiometryStatus('success');
+            setTimeout(() => {
+                alert("✅ Identidade Confirmada: Téc. Segurança Responsável.\nAção autorizada e registrada.");
+                setShowRiskModal(false);
+                setBiometryStatus('idle');
+            }, 1500);
+        }, 2000);
+    };
+
+    return (
+        <div className="space-y-6 animate-in fade-in">
+            
+            {/* CABEÇALHO */}
+            <div className="flex flex-col gap-4">
+                <div className="flex justify-between items-center">
+                    <h2 className="text-3xl font-bold text-white flex items-center gap-2"><ShieldCheck className="text-green-400"/> Segurança do Trabalho</h2>
+                    <div className="text-right">
+                        <p className="text-[10px] text-white/50 uppercase">Unidade Ativa</p>
+                        <p className="text-sm font-bold text-white">{activeBranch}</p>
+                    </div>
+                </div>
+                {/* MENU DE NAVEGAÇÃO DO MÓDULO */}
+                <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
+                    {['dashboard', 'estoque', 'movimentacoes', 'treinamentos', 'mapa'].map(tab => (
+                        <button key={tab} onClick={() => setActiveTab(tab)} className={`px-4 py-2 rounded-full text-xs font-bold uppercase transition ${activeTab === tab ? 'bg-green-600 text-white' : 'bg-white/10 text-white/50'}`}>
+                            {tab}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            {/* --- ABA 1: DASHBOARD --- */}
+            {activeTab === 'dashboard' && (
+                <>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <GlassCard className="border-l-4 border-green-500">
+                            <h3 className="text-white font-bold">Dias Sem Acidentes</h3>
+                            <p className="text-4xl font-black text-white mt-2">{activeBranch === 'São Francisco de Assis' ? '450' : '1.205'}</p>
+                            <p className="text-xs text-white/50">Recorde da Unidade</p>
+                        </GlassCard>
+                        <GlassCard className="border-l-4 border-red-500" onClick={() => setActiveTab('movimentacoes')}>
+                            <h3 className="text-white font-bold">Riscos Ativos</h3>
+                            <div className="flex items-center gap-2 mt-2"><span className="w-3 h-3 bg-red-500 rounded-full animate-pulse"/><p className="text-4xl font-black text-white">{currentPETs.length}</p></div>
+                            <p className="text-xs text-white/50">Atividades Críticas</p>
+                        </GlassCard>
+                        <GlassCard className="border-l-4 border-blue-500" onClick={() => setActiveTab('estoque')}>
+                            <h3 className="text-white font-bold">Alerta de Estoque</h3>
+                            <p className="text-4xl font-black text-white mt-2">{currentStock.filter(i => i.status !== 'Ok').length}</p>
+                            <p className="text-xs text-white/50">Itens Abaixo do Mínimo</p>
+                        </GlassCard>
+                    </div>
+                    <GlassCard className="bg-gradient-to-r from-slate-800 to-slate-900">
+                        <h3 className="font-bold text-white mb-2 flex items-center gap-2"><Bell size={16}/> Mural de Avisos EHS</h3>
+                        <p className="text-sm text-white/70">• Inspeção dos extintores programada para Sexta-feira.</p>
+                    </GlassCard>
+                </>
+            )}
+
+            {/* --- ABA 2: ESTOQUE DE SEGURANÇA (NOVA) --- */}
+            {activeTab === 'estoque' && (
+                <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                        <h3 className="font-bold text-white flex gap-2 items-center"><Package size={20}/> Almoxarifado EHS</h3>
+                        <button className="text-xs text-blue-400 border border-blue-500/30 px-3 py-1.5 rounded-lg hover:bg-blue-500/10">Solicitar Reposição</button>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 gap-3">
+                        {currentStock.length === 0 && <p className="text-white/30 text-center py-8">Nenhum item cadastrado nesta unidade.</p>}
+                        {currentStock.map(item => (
+                            <GlassCard key={item.id} className={`p-4 flex justify-between items-center border-l-4 ${item.status === 'Ok' ? 'border-green-500' : item.status === 'Crítico' ? 'border-red-500' : 'border-yellow-500'}`}>
+                                <div className="flex items-center gap-4">
+                                    <div className={`p-3 rounded-xl ${item.type === 'EPI' ? 'bg-blue-500/20 text-blue-400' : 'bg-orange-500/20 text-orange-400'}`}>
+                                        {item.type === 'EPI' ? <HardHat size={24}/> : <Wrench size={24}/>}
+                                    </div>
+                                    <div>
+                                        <h4 className="font-bold text-white">{item.name}</h4>
+                                        <p className="text-xs text-white/50">{item.type} • Mínimo: {item.min}</p>
+                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-2xl font-bold text-white">{item.qtd}</p>
+                                    <span className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase ${item.status === 'Ok' ? 'text-green-400 bg-green-500/10' : 'text-red-400 bg-red-500/10'}`}>
+                                        {item.status}
+                                    </span>
+                                    <button onClick={handleBiometry} className="block mt-2 text-[10px] text-white/40 hover:text-white underline">Entregar</button>
+                                </div>
+                            </GlassCard>
+                        ))}
+                    </div>
+                    <input type="file" ref={fileRef} hidden onChange={confirmBiometry} accept="image/*;capture=user"/>
+                </div>
+            )}
+
+            {/* --- ABA 3: MOVIMENTAÇÕES (PETs) --- */}
+            {activeTab === 'movimentacoes' && (
+                <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                        <h3 className="font-bold text-white">Monitoramento em Tempo Real</h3>
+                        <NeonButton onClick={() => setShowRiskModal(true)} className="h-8 text-xs"><PlusCircle size={14}/> Nova Movimentação</NeonButton>
+                    </div>
+                    {currentPETs.map(pet => (
+                        <GlassCard key={pet.id} className="border-l-4 border-red-500 bg-red-900/10">
+                            <div className="flex justify-between items-start">
+                                <div>
+                                    <h4 className="font-bold text-white text-lg">{pet.local}</h4>
+                                    <span className="text-xs bg-red-500/20 text-red-300 px-2 py-0.5 rounded border border-red-500/30">{pet.type}</span>
+                                    <p className="text-sm text-white/70 mt-2">Resp: {pet.worker}</p>
+                                </div>
+                                <div className="text-right">
+                                    <div className="flex items-center gap-1 text-red-400 font-mono font-bold bg-black/30 px-2 py-1 rounded"><Clock size={14}/> {pet.max_end}</div>
+                                    <button className="mt-2 text-xs text-green-400 border border-green-500/30 px-2 py-1 rounded hover:bg-green-500/10">Finalizar</button>
+                                </div>
+                            </div>
+                        </GlassCard>
+                    ))}
+                </div>
+            )}
+
+            {/* --- ABA 4: TREINAMENTOS --- */}
+            {activeTab === 'treinamentos' && (
+                <div className="space-y-4">
+                    <h3 className="font-bold text-white flex gap-2 items-center"><UserCheck size={18}/> Matriz de Capacitação</h3>
+                    <div className="grid grid-cols-1 gap-3">
+                        {currentTrainings.map(t => (
+                            <GlassCard key={t.id} className="p-4 flex justify-between items-center">
+                                <div>
+                                    <h4 className="font-bold text-white">{t.name}</h4>
+                                    <p className="text-xs text-white/50">{t.role} • {t.branch}</p>
+                                    <p className="text-sm text-white mt-1">{t.course}</p>
+                                </div>
+                                <div className="text-right">
+                                    <span className={`px-3 py-1 rounded-full text-xs font-bold border ${t.status === 'Vigente' ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-red-500/20 text-red-400 border-red-500/30 animate-pulse'}`}>{t.status}</span>
+                                    <p className="text-[10px] text-white/40 mt-1">Val: {t.expire}</p>
+                                    {t.status === 'Vencido' && <button className="block w-full text-right text-[10px] text-yellow-400 mt-1 hover:underline">Notificar</button>}
+                                </div>
+                            </GlassCard>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* --- ABA 5: MAPA DE RISCO --- */}
+            {activeTab === 'mapa' && (
+                <div className="space-y-4">
+                    <h3 className="font-bold text-white flex gap-2 items-center"><AlertTriangle size={18}/> Plantas de Risco</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {currentRisks.map(risk => (
+                            <GlassCard key={risk.id} className="bg-orange-900/10 border-l-4 border-orange-500">
+                                <div className="flex justify-between mb-2"><h4 className="font-bold text-white">{risk.area}</h4><span className="text-xs font-mono bg-black/30 px-2 py-1 rounded text-white">{risk.class}</span></div>
+                                <p className="text-sm text-white/70">Risco: <strong className="text-orange-400">{risk.risk}</strong></p>
+                            </GlassCard>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* --- MODAL DE ABERTURA DE MOVIMENTAÇÃO DE RISCO --- */}
+            <AnimatePresence>
+                {showRiskModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+                        <motion.div initial={{scale:0.9}} animate={{scale:1}} className="w-full max-w-md bg-[#0f172a] border border-white/10 rounded-3xl p-6 shadow-2xl">
+                            <h3 className="text-xl font-bold text-white mb-4">Nova Movimentação de Risco</h3>
+                            {biometryStatus === 'idle' && (
+                                <div className="space-y-4">
+                                    <GlassInput label="Local do Serviço" placeholder="Ex: Silo 02"/>
+                                    <GlassInput label="Descrição da Atividade" placeholder="Ex: Solda em altura"/>
+                                    <div className="bg-yellow-500/10 p-3 rounded-xl border border-yellow-500/30 text-xs text-yellow-200"><p className="font-bold mb-1">⚠️ Requisitos Obrigatórios:</p><ul className="list-disc pl-4 space-y-1"><li>Medição de Gases (LEL/O2)</li><li>Bloqueio de Energia (Lockout)</li><li>Vigia Externo posicionado</li></ul></div>
+                                    <div className="flex gap-3 mt-6"><button onClick={() => setShowRiskModal(false)} className="flex-1 py-3 text-white/50 hover:text-white">Cancelar</button><NeonButton onClick={confirmBiometry} className="flex-1"><ScanFace size={18}/> Autorizar (FaceID)</NeonButton></div>
+                                </div>
+                            )}
+                            {biometryStatus === 'scanning' && (<div className="text-center py-8"><ScanFace size={64} className="text-blue-400 animate-pulse mx-auto mb-4"/><h4 className="text-white font-bold">Escaneando Face...</h4><p className="text-xs text-white/50">Mantenha o rosto centralizado</p></div>)}
+                            {biometryStatus === 'success' && (<div className="text-center py-8"><CheckCircle size={64} className="text-green-400 mx-auto mb-4"/><h4 className="text-white font-bold">Autorização Validada</h4><p className="text-xs text-white/50">Certificado Digital Gerado</p></div>)}
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+        </div>
+    );
+};
+
+// --- MÓDULO SUPERVISOR DE ARMAZÉM (NOVO) ---
+const WarehouseView = ({ setView, role, activeBranch }) => {
+    const [activeTab, setActiveTab] = useState('dashboard'); // dashboard, logistica, gastos, equipe
+    const [showPetModal, setShowPetModal] = useState(false);
+    const [biometryStatus, setBiometryStatus] = useState('idle');
+    const [selectedWorker, setSelectedWorker] = useState("");
+    const fileRef = useRef(null);
+
+    // DADOS: EQUIPE DO ARMAZÉM
+    const warehouseTeam = [
+        { id: 1, name: "Carlos Mendes", role: "Operador de Secador", status: "Ativo" },
+        { id: 2, name: "João Silva", role: "Auxiliar de Limpeza", status: "Ativo" },
+        { id: 3, name: "Roberto Alves", role: "Classificador", status: "Férias" }
+    ];
+
+    // DADOS: EXPEDIÇÃO vs PORTO (CONTROLE DE QUEBRA)
+    const shipmentHistory = [
+        { id: 5501, data: "28/11", placa: "IXY-9988", destino: "Porto Rio Grande", pesoSaida: 32000, pesoChegada: 31950, quebra: 50, status: "Aceitável" },
+        { id: 5502, data: "27/11", placa: "JJA-1122", destino: "Porto Rio Grande", pesoSaida: 45000, pesoChegada: 44800, quebra: 200, status: "Alerta de Perda" }
+    ];
+
+    // DADOS: GASTOS INTERNOS
+    const internalExpenses = [
+        { id: 1, desc: "Manutenção Correia Elevador 2", valor: 4500.00, data: "Hoje", status: "Aprovado" },
+        { id: 2, desc: "Lenha para Secagem (Metrp)", valor: 12000.00, data: "25/11", status: "Pendente" }
+    ];
+
+    const confirmBiometry = () => {
+        if(!selectedWorker) return alert("Selecione o funcionário que entrará na área de risco.");
+        setBiometryStatus('scanning');
+        setTimeout(() => {
+            setBiometryStatus('success');
+            setTimeout(() => {
+                alert(`✅ PET Autorizada!\n\nColaborador: ${selectedWorker}\nSupervisor Responsável: ${role}\nValidação Biométrica: OK`);
+                setShowPetModal(false);
+                setBiometryStatus('idle');
+            }, 1500);
+        }, 2000);
+    };
+
+    return (
+        <div className="space-y-6 animate-in fade-in">
+            {/* CABEÇALHO */}
+            <div className="flex flex-col gap-4">
+                <div className="flex justify-between items-center">
+                    <h2 className="text-3xl font-bold text-white flex items-center gap-2"><PackageCheck className="text-blue-400"/> Gestão de Armazém</h2>
+                    <div className="text-right"><p className="text-[10px] text-white/50 uppercase">Unidade</p><p className="text-sm font-bold text-white">{activeBranch}</p></div>
+                </div>
+                <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
+                    {['dashboard', 'logistica', 'gastos', 'equipe'].map(tab => (
+                        <button key={tab} onClick={() => setActiveTab(tab)} className={`px-4 py-2 rounded-full text-xs font-bold uppercase transition ${activeTab === tab ? 'bg-blue-600 text-white' : 'bg-white/10 text-white/50'}`}>{tab}</button>
+                    ))}
+                </div>
+            </div>
+
+            {/* DASHBOARD */}
+            {activeTab === 'dashboard' && (
+                <>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <GlassCard className="border-l-4 border-green-500"><h3 className="text-white font-bold">Volume Recebido</h3><p className="text-4xl font-black text-white mt-2">450k <span className="text-lg font-normal text-white/50">sc</span></p></GlassCard>
+                        <GlassCard className="border-l-4 border-red-500"><h3 className="text-white font-bold">Quebra Técnica</h3><p className="text-4xl font-black text-white mt-2">0.45%</p><p className="text-xs text-red-300">Acima da meta (0.3%)</p></GlassCard>
+                        <GlassCard className="border-l-4 border-blue-500" onClick={()=>setActiveTab('equipe')}><h3 className="text-white font-bold">Equipe Presente</h3><p className="text-4xl font-black text-white mt-2">8/10</p></GlassCard>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <button onClick={() => setShowPetModal(true)} className="p-4 bg-red-900/30 border border-red-500/50 rounded-xl flex flex-col items-center gap-2 hover:bg-red-900/50 transition"><AlertTriangle className="text-red-400" size={32}/><span className="text-white font-bold">Liberar PET</span></button>
+                        <button onClick={() => setActiveTab('gastos')} className="p-4 bg-blue-900/30 border border-blue-500/50 rounded-xl flex flex-col items-center gap-2 hover:bg-blue-900/50 transition"><Wallet className="text-blue-400" size={32}/><span className="text-white font-bold">Lançar Gasto</span></button>
+                    </div>
+                </>
+            )}
+
+            {/* LOGÍSTICA (QUEBRA) */}
+            {activeTab === 'logistica' && (
+                <div className="space-y-4">
+                    <h3 className="font-bold text-white flex gap-2 items-center"><Truck size={18}/> Expedição vs. Porto</h3>
+                    {shipmentHistory.map(s => (
+                        <GlassCard key={s.id} className={`p-4 border-l-4 ${s.status.includes('Alerta') ? 'border-red-500' : 'border-green-500'}`}>
+                            <div className="flex justify-between items-center border-b border-white/10 pb-2 mb-2"><div><p className="font-bold text-white">Carga #{s.id}</p><p className="text-xs text-white/50">{s.destino}</p></div><span className="text-[10px] bg-white/10 px-2 py-1 rounded">{s.status}</span></div>
+                            <div className="grid grid-cols-3 text-center gap-2 text-xs">
+                                <div><p className="text-white/40">Saída</p><p className="text-white font-mono">{s.pesoSaida}</p></div>
+                                <div><p className="text-white/40">Chegada</p><p className="text-white font-mono">{s.pesoChegada}</p></div>
+                                <div className="bg-black/30 rounded p-1"><p className="text-white/40">Quebra</p><p className="text-red-400 font-mono font-bold">-{s.quebra} kg</p></div>
+                            </div>
+                        </GlassCard>
+                    ))}
+                </div>
+            )}
+
+            {/* GASTOS */}
+            {activeTab === 'gastos' && (
+                <div className="space-y-4">
+                    <h3 className="font-bold text-white">Despesas Operacionais</h3>
+                    {internalExpenses.map(e => (<div key={e.id} className="flex justify-between items-center p-3 bg-white/5 rounded-xl border border-white/5"><div><p className="font-bold text-white text-sm">{e.desc}</p><p className="text-[10px] text-white/40">{e.data}</p></div><div className="text-right"><p className="font-bold text-white">{formatCurrency(e.valor)}</p><span className="text-[10px] text-yellow-400">{e.status}</span></div></div>))}
+                </div>
+            )}
+
+            {/* MODAL PET (COM SELEÇÃO DE FUNCIONÁRIO) */}
+            <AnimatePresence>
+                {showPetModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+                        <motion.div initial={{scale:0.9}} animate={{scale:1}} className="w-full max-w-md bg-[#0f172a] border border-white/10 rounded-3xl p-6 shadow-2xl">
+                            <h3 className="text-xl font-bold text-white mb-4">Autorizar Trabalho de Risco</h3>
+                            {biometryStatus === 'idle' && (
+                                <div className="space-y-4">
+                                    <GlassInput label="Local" placeholder="Ex: Fosso Elevador 1"/>
+                                    <GlassInput label="Atividade" placeholder="Ex: Limpeza"/>
+                                    <div>
+                                        <label className="text-xs text-white/60 font-bold uppercase ml-2">Colaborador Executante</label>
+                                        <select className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white mt-1 focus:outline-none [&>option]:bg-slate-900" value={selectedWorker} onChange={(e) => setSelectedWorker(e.target.value)}>
+                                            <option value="">Selecione...</option>
+                                            {warehouseTeam.map(w => <option key={w.id} value={w.name}>{w.name} - {w.role}</option>)}
+                                        </select>
+                                    </div>
+                                    <div className="flex gap-3 mt-6"><button onClick={() => setShowPetModal(false)} className="flex-1 py-3 text-white/50 hover:text-white">Cancelar</button><NeonButton onClick={confirmBiometry} className="flex-1"><ScanFace size={18}/> Autorizar (FaceID)</NeonButton></div>
+                                </div>
+                            )}
+                            {biometryStatus === 'scanning' && (<div className="text-center py-8"><ScanFace size={64} className="text-blue-400 animate-pulse mx-auto mb-4"/><h4 className="text-white font-bold">Validando Supervisor...</h4></div>)}
+                            {biometryStatus === 'success' && (<div className="text-center py-8"><CheckCircle size={64} className="text-green-400 mx-auto mb-4"/><h4 className="text-white font-bold">PET Emitida</h4><p className="text-xs text-white/50">Assinatura Digital Registrada</p></div>)}
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+            <input type="file" ref={fileRef} hidden onChange={confirmBiometry} accept="image/*;capture=user"/>
+        </div>
+    );
 };
 
 const MarketplaceView = ({ goToChat, products, setView }) => {
@@ -937,14 +1287,25 @@ const ProducerHome = ({ setView }) => (
 );
 const OperatorHome = ({ setView }) => (<div className="grid grid-cols-1 gap-6 animate-in fade-in"><GlassCard className="col-span-full border-l-4 border-green-500 text-center py-12 cursor-pointer hover:bg-white/5" onClick={()=>setView('estoque')}><Camera size={48} className="mx-auto mb-4 text-green-400"/><h3 className="text-2xl font-bold text-white">Escanear Entrada</h3></GlassCard></div>);
 const EstoquistaDashboard = ({ setView }) => (<div className="grid grid-cols-1 gap-6 animate-in fade-in"><GlassCard className="col-span-full border-l-4 border-green-500 text-center py-12 cursor-pointer hover:bg-white/5" onClick={()=>setView('estoque')}><Camera size={48} className="mx-auto mb-4 text-green-400"/><h3 className="text-2xl font-bold text-white">Escanear Entrada</h3></GlassCard></div>);
-const SmartHome = ({ role, setView, branchData }) => {
+const SmartHome = ({ role, setView, branchData, activeBranch }) => {
+    // 1. Perfis Externos/Operacionais
     if (role === 'Produtor') return <ProducerHome setView={setView} />;
     if (role === 'Estoquista') return <EstoquistaDashboard setView={setView} />;
     if (role === 'Operador') return <OperatorHome setView={setView} />;
-    if (role === 'Supervisor Armazém' || role === 'Téc. Segurança') return <SafetyView setView={setView} role={role} />;
+    
+    // 2. Perfil SUPERVISOR DE ARMAZÉM (Novo Painel Operacional)
+    if (role === 'Supervisor Armazém') {
+        return <WarehouseView setView={setView} role={role} activeBranch={activeBranch} />;
+    }
+    
+    // 3. Perfil TÉC. SEGURANÇA (Painel Original de EHS)
+    if (role === 'Téc. Segurança') {
+        return <SafetyView setView={setView} role={role} activeBranch={activeBranch} />;
+    }
+
+    // 4. Diretoria
     return <DirectorHome setView={setView} branchData={branchData} />;
 };
-
 const SwitchTenantWidget = ({ currentTenant, onSwitch }) => {
     const otherTenant = currentTenant === 'cotriba' ? '3tentos' : 'cotriba';
     const OtherLogo = tenants[otherTenant].logo;
@@ -981,6 +1342,162 @@ const LoginScreen = ({ onLogin, loading, error }) => {
         </div>
     );
 };
+
+// --- MÓDULO DE INOVAÇÃO: VITALIS COPILOT (SUPER FUNCIONÁRIO) ---
+const VitalisCopilot = ({ setView, role }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const [command, setCommand] = useState("");
+    const [isProcessing, setIsProcessing] = useState(false);
+    const [feedback, setFeedback] = useState(null); 
+
+    const executeCommand = () => {
+        if (!command.trim()) return;
+        setIsProcessing(true);
+        setFeedback(null);
+        
+        const cmd = command.toLowerCase();
+
+        // SIMULAÇÃO DE INTELIGÊNCIA ARTIFICIAL (NLP)
+        setTimeout(() => {
+            setIsProcessing(false);
+
+            // 1. PROCESSO DE ASSOCIAÇÃO (RH/JURÍDICO)
+            // Ex: "Quais documentos precisa para associar?" ou "Como cadastrar novo sócio?"
+            if (cmd.includes("associar") || cmd.includes("sócio") || cmd.includes("cadastro")) {
+                if (cmd.includes("documento") || cmd.includes("precisa")) {
+                    setFeedback({
+                        type: "info",
+                        title: "📋 Requisitos para Associação (PF)",
+                        details: [
+                            "1. Cópia do CPF e RG (e do cônjuge)",
+                            "2. Matrícula do Imóvel (atualizada 30 dias)",
+                            "3. CCIR e ITR do último exercício",
+                            "4. Inscrição Estadual de Produtor",
+                            "5. Comprovante de Endereço"
+                        ],
+                        action: "Dica: Digite 'Gerar contrato para CPF...' quando tiver os documentos."
+                    });
+                } else {
+                    // Ex: "Gerar contrato para João Silva"
+                    setFeedback({
+                        type: "success",
+                        title: "📝 Contrato de Associação Gerado",
+                        details: [
+                            "Tipo: Pessoa Física",
+                            "Status: Minuta criada no Jurídico",
+                            "Matrícula Provisória: #99821",
+                            "Pendência: Assinatura Digital"
+                        ],
+                        action: "Link para assinatura enviado ao WhatsApp do produtor."
+                    });
+                }
+                return;
+            }
+
+            // 2. RELATÓRIOS COMPLEXOS (GRÃOS)
+            // Ex: "Relatório tradição 40/40 últimos 15 dias"
+            if (cmd.includes("relatório") || cmd.includes("tradição")) {
+                setFeedback({
+                    type: "success",
+                    title: "📊 Relatório de Recebimento (Tradição)",
+                    details: [
+                        "Período: Últimos 15 dias",
+                        "Filtro: Soja Padrão 40/40",
+                        "Volume Total: 45.200 sacas",
+                        "Umidade Média: 13.2%",
+                        "Impureza Média: 0.8%"
+                    ],
+                    action: "O PDF completo foi enviado para seu e-mail."
+                });
+                return;
+            }
+
+            // 3. VENDAS E PEDIDOS (COMERCIAL)
+            // Ex: "Vender 10 caixas de fungicida para o Pedro"
+            if (cmd.includes("venda") || cmd.includes("vender") || cmd.includes("pedido")) {
+                setFeedback({
+                    type: "success",
+                    title: "💰 Pedido de Venda Criado",
+                    details: [
+                        "Cliente: Pedro (Identificado na carteira)",
+                        "Produto: Fungicida Fox Xpro",
+                        "Qtd: 10 Caixas",
+                        "Valor Total: R$ 12.500,00",
+                        "Status: Aguardando Faturamento"
+                    ],
+                    action: "Nota Fiscal pré-emitida. Estoque reservado."
+                });
+                return;
+            }
+
+            // 4. CONSULTA RÁPIDA (GERAL)
+            if (cmd.includes("estoque") || cmd.includes("preço")) {
+                setFeedback({
+                    type: "info",
+                    title: "🔎 Consulta Rápida",
+                    details: ["Produto: Ureia Agrícola", "Estoque: 500 Ton (S. Francisco)", "Preço: R$ 135,00"],
+                    action: "Deseja reservar?"
+                });
+                return;
+            }
+
+            // Fallback
+            setFeedback({
+                type: "error",
+                title: "Comando não entendido",
+                details: ["Tente ser mais específico, ex:", "'Gerar contrato de associação'", "'Relatório de soja'", "'Vender adubo'"],
+                action: ""
+            });
+
+        }, 1500);
+    };
+
+    return (
+        <>
+            <button onClick={() => { setIsOpen(true); setFeedback(null); setCommand(""); }} className="fixed bottom-24 right-6 z-50 bg-gradient-to-r from-indigo-600 to-blue-600 text-white p-4 rounded-full shadow-2xl shadow-blue-900/50 hover:scale-110 transition-transform border-2 border-white/20 group">
+                <div className="absolute inset-0 bg-white rounded-full animate-ping opacity-20"></div>
+                <Briefcase size={28}/>
+                <span className="absolute right-full mr-3 top-2 bg-black/90 text-white text-xs px-3 py-1 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap border border-white/10 font-bold">Vitalis Copilot</span>
+            </button>
+
+            <AnimatePresence>
+                {isOpen && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[70] flex items-end md:items-center justify-center bg-black/60 backdrop-blur-sm p-4 md:p-0">
+                        <motion.div initial={{ y: 100, scale: 0.9 }} animate={{ y: 0, scale: 1 }} exit={{ y: 100, scale: 0.9 }} className="w-full max-w-lg bg-[#0f172a] border border-indigo-500/30 rounded-3xl p-6 shadow-2xl relative overflow-hidden">
+                            <div className="flex justify-between items-center mb-6"><h3 className="text-2xl font-bold text-white flex items-center gap-2"><div className="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center"><Briefcase size={16}/></div> Vitalis Copilot</h3><button onClick={() => setIsOpen(false)} className="p-2 hover:bg-white/10 rounded-full text-white"><X size={24}/></button></div>
+
+                            {feedback ? (
+                                <div className={`mb-6 p-4 rounded-2xl border ${feedback.type === 'success' ? 'bg-green-900/20 border-green-500/50' : feedback.type === 'error' ? 'bg-red-900/20 border-red-500/50' : 'bg-blue-900/20 border-blue-500/50'}`}>
+                                    <h4 className={`font-bold text-lg mb-2 ${feedback.type === 'success' ? 'text-green-400' : feedback.type === 'error' ? 'text-red-400' : 'text-blue-400'}`}>{feedback.title}</h4>
+                                    <ul className="space-y-2 mb-4">{feedback.details.map((det, i) => (<li key={i} className="text-sm text-white/80 flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-white/50"/> {det}</li>))}</ul>
+                                    <p className="text-xs font-bold uppercase tracking-wider opacity-50">{feedback.action}</p>
+                                    <NeonButton onClick={() => { setFeedback(null); setCommand(""); }} className="w-full mt-4">Nova Solicitação</NeonButton>
+                                </div>
+                            ) : (
+                                <div className="mb-6 text-center">
+                                    <p className="text-white/60 text-sm mb-4">Sou o seu Assistente Administrativo. O que deseja fazer?</p>
+                                    <div className="flex flex-wrap gap-2 justify-center">
+                                        <button onClick={() => setCommand("O que precisa para associar?")} className="text-xs bg-white/5 border border-white/10 px-3 py-1 rounded-full text-indigo-300 hover:bg-white/10">📋 Requisitos Sócio</button>
+                                        <button onClick={() => setCommand("Fazer contrato de associação para CPF...")} className="text-xs bg-white/5 border border-white/10 px-3 py-1 rounded-full text-indigo-300 hover:bg-white/10">📝 Gerar Contrato</button>
+                                        <button onClick={() => setCommand("Relatório Tradição 40/40 últimos 15 dias")} className="text-xs bg-white/5 border border-white/10 px-3 py-1 rounded-full text-indigo-300 hover:bg-white/10">📊 Relatório Grãos</button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {!feedback && (
+                                <div className="relative">
+                                    <input autoFocus value={command} onChange={(e) => setCommand(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && executeCommand()} className="w-full bg-black/40 border border-indigo-500/50 rounded-2xl pl-4 pr-14 py-4 text-lg text-white focus:outline-none focus:border-indigo-400 shadow-inner placeholder-white/20" placeholder="Digite ou fale o comando..."/>
+                                    <div className="absolute right-2 top-2 flex gap-1">{isProcessing ? <Loader className="animate-spin text-white p-2" size={40}/> : (<button onClick={executeCommand} className="p-2 bg-indigo-600 rounded-xl text-white hover:bg-indigo-500 transition"><Send size={20}/></button>)}</div>
+                                </div>
+                            )}
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </>
+    );
+};
+
 
 // --- MAIN DASHBOARD (COM MENU MOBILE CORRIGIDO) ---
 const Dashboard = ({ user, role, currentTenant, onChangeTenant, onLogout, marketProducts, setMarketProducts }) => {
@@ -1029,20 +1546,30 @@ const Dashboard = ({ user, role, currentTenant, onChangeTenant, onLogout, market
 
             {/* ÁREA PRINCIPAL */}
             <main className="flex-1 flex flex-col h-screen overflow-hidden relative z-10">
-                <header className="h-16 border-b border-white/10 flex items-center justify-between px-6 bg-black/20 backdrop-blur-md z-20">
-                    <div className="flex items-center gap-4">
-                        <h1 className="font-bold text-lg tracking-tight">{currentTenant.name} <span className="text-white/40 font-normal">Manager</span></h1>
-                        {(role === 'Admin' || role === 'Coord. Regional') && (<div className="hidden md:flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-lg border border-white/10 hover:bg-white/20 transition"><MapPin size={14} className={currentTenant.colors.accent.replace('text-', 'text-')}/><select value={activeBranch} onChange={(e) => setActiveBranch(e.target.value)} className="bg-transparent text-xs font-bold text-white outline-none appearance-none cursor-pointer [&>option]:bg-slate-900 pr-2 min-w-[120px]">{currentTenant.branches.map(b => <option key={b} value={b}>{b}</option>)}</select><ChevronDown size={12} className="text-white/50"/></div>)}
-                        {role === 'Coord. Unidade' && (<div className="hidden md:flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-lg border border-white/5 cursor-not-allowed opacity-80"><MapPin size={14} className="text-white/50"/><span className="text-xs font-bold text-white">São Francisco de Assis</span><LockKeyhole size={12} className="text-white/30"/></div>)}
-                    </div>
-                    <div className="flex items-center gap-4"><div className={`h-8 w-8 rounded-full ${currentTenant.colors.accent_bg} flex items-center justify-center font-bold text-xs text-black shadow-lg`}>{role.substring(0,2).toUpperCase()}</div></div>
-                </header>
-                
+                {/* LÓGICA DE PERMISSÃO REGIONAL ATUALIZADA */}
+{(role === 'Admin' || role === 'Coord. Regional' || role === 'Téc. Segurança') && (
+    <div className="hidden md:flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-lg border border-white/10 hover:bg-white/20 transition">
+        <MapPin size={14} className={currentTenant.colors.accent.replace('text-', 'text-')}/>
+        <select 
+            value={activeBranch} 
+            onChange={(e) => setActiveBranch(e.target.value)} 
+            className="bg-transparent text-xs font-bold text-white outline-none appearance-none cursor-pointer [&>option]:bg-slate-900 pr-2 min-w-[120px]"
+        >
+            {currentTenant.branches.map(b => <option key={b} value={b}>{b}</option>)}
+        </select>
+        <ChevronDown size={12} className="text-white/50"/>
+    </div>
+)}
+{/* --- VITALIS COPILOT (APENAS PARA FUNCIONÁRIOS) --- */}
+            {role !== 'Produtor' && (
+                <VitalisCopilot setView={setView} role={role} />
+            )} 
+               
                 {/* CONTEÚDO ROLÁVEL COM PADDING PARA O MENU MOBILE */}
                 <div className="flex-1 overflow-y-auto p-6 pb-24">
                     <AnimatePresence mode="wait">
                         <motion.div key={view + activeBranch} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }}>
-                            {view === 'home' && <SmartHome role={role} setView={setView} branchData={branchData} />}
+                            {view === 'home' && <SmartHome role={role} setView={setView} branchData={branchData} activeBranch={activeBranch} />}
                             {view === 'estoque' && <EstoqueView userId={user.uid} inventory={[]} role={role} activeBranch={activeBranch} />}
                             {view === 'agrilens' && <AgriLensView setView={setView} setChatContext={setChatContext}/>}
                             {view === 'marketplace' && <MarketplaceView goToChat={() => setView('chat')} role={role} products={marketProducts} setView={setView} setChatContext={setChatContext}/>}
@@ -1059,7 +1586,7 @@ const Dashboard = ({ user, role, currentTenant, onChangeTenant, onLogout, market
                             {view === 'receituario' && <ReceituarioView />}
                             {view === 'pool' && <PoolView />}
                             {view === 'crm' && <CRMView />}
-                            {view === 'safety' && <SafetyView setView={setView} role={role} />}
+                            {view === 'safety' && <SafetyView setView={setView} role={role} activeBranch={activeBranch} />}
                             {view === 'relatorios' && <RelatoriosView />}
                             {view === 'price_update' && <PriceUpdateView products={marketProducts} setProducts={setMarketProducts} />}
                             {view === 'nutricao' && <NutricaoView products={marketProducts} />}
@@ -1067,7 +1594,7 @@ const Dashboard = ({ user, role, currentTenant, onChangeTenant, onLogout, market
                     </AnimatePresence>
                 </div>
             </main>
-
+      
             {/* --- GAVETA DE MENU MOBILE (CORRIGIDA) --- */}
             <AnimatePresence>
                 {showMobileMenu && (
