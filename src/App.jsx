@@ -982,7 +982,7 @@ const LoginScreen = ({ onLogin, loading, error }) => {
     );
 };
 
-// --- MAIN DASHBOARD (COM MENU MOBILE COMPLETO) ---
+// --- MAIN DASHBOARD (COM MENU MOBILE CORRIGIDO) ---
 const Dashboard = ({ user, role, currentTenant, onChangeTenant, onLogout, marketProducts, setMarketProducts }) => {
     const [view, setView] = useState('home');
     const [activeBranch, setActiveBranch] = useState(currentTenant.branches[0]);
@@ -1018,17 +1018,16 @@ const Dashboard = ({ user, role, currentTenant, onChangeTenant, onLogout, market
 
     return (
         <div className={`min-h-screen bg-gradient-to-br ${currentTenant.colors.gradient} text-white font-sans flex transition-all duration-1000`}>
-            {/* Background Fixo */}
             <div className="fixed inset-0 z-0 pointer-events-none"><img src={currentTenant.bg_image} className="absolute inset-0 w-full h-full object-cover opacity-20" alt="bg"/><div className="absolute inset-0 bg-black/60"/><div className="absolute bottom-8 right-8 opacity-10"><Logo size={400}/></div></div>
             
-            {/* Sidebar (Apenas Desktop) */}
+            {/* Sidebar Desktop */}
             <aside className={`w-20 ${currentTenant.colors.sidebar} border-r border-white/10 flex flex-col items-center py-6 gap-6 hidden md:flex relative z-20 backdrop-blur-xl`}>
                 <div className={`p-3 bg-white/10 rounded-xl ${currentTenant.colors.primary.replace('bg-', 'text-')}`}><Logo size={28}/></div>
                 <nav className="flex-1 flex flex-col gap-4 w-full px-2">{menu.map(item => (<button key={item.id} onClick={() => setView(item.id)} className={twMerge("p-3 rounded-xl transition-all flex justify-center group relative", view === item.id ? "bg-white/20 text-white" : "text-white/40 hover:text-white hover:bg-white/5")} title={item.label}><item.icon size={22}/></button>))}</nav>
                 <button onClick={onLogout} className="p-3 text-white/30 hover:text-red-400 transition"><LogOut size={22}/></button>
             </aside>
 
-            {/* Área Principal */}
+            {/* Conteúdo Principal */}
             <main className="flex-1 flex flex-col h-screen overflow-hidden relative z-10">
                 <header className="h-16 border-b border-white/10 flex items-center justify-between px-6 bg-black/20 backdrop-blur-md z-20">
                     <div className="flex items-center gap-4">
@@ -1036,10 +1035,10 @@ const Dashboard = ({ user, role, currentTenant, onChangeTenant, onLogout, market
                         {(role === 'Admin' || role === 'Coord. Regional') && (<div className="hidden md:flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-lg border border-white/10 hover:bg-white/20 transition"><MapPin size={14} className={currentTenant.colors.accent.replace('text-', 'text-')}/><select value={activeBranch} onChange={(e) => setActiveBranch(e.target.value)} className="bg-transparent text-xs font-bold text-white outline-none appearance-none cursor-pointer [&>option]:bg-slate-900 pr-2 min-w-[120px]">{currentTenant.branches.map(b => <option key={b} value={b}>{b}</option>)}</select><ChevronDown size={12} className="text-white/50"/></div>)}
                         {role === 'Coord. Unidade' && (<div className="hidden md:flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-lg border border-white/5 cursor-not-allowed opacity-80"><MapPin size={14} className="text-white/50"/><span className="text-xs font-bold text-white">São Francisco de Assis</span><LockKeyhole size={12} className="text-white/30"/></div>)}
                     </div>
-                    <div className="flex items-center gap-4"><div className="h-8 w-8 rounded-full bg-yellow-500 flex items-center justify-center font-bold text-xs text-blue-900 shadow-lg">{role.substring(0,2).toUpperCase()}</div></div>
+                    <div className="flex items-center gap-4"><div className={`h-8 w-8 rounded-full ${currentTenant.colors.accent_bg} flex items-center justify-center font-bold text-xs text-black shadow-lg`}>{role.substring(0,2).toUpperCase()}</div></div>
                 </header>
                 
-                <div className="flex-1 overflow-y-auto p-6 pb-24"> {/* pb-24 garante que o conteúdo não fique atrás do menu mobile */}
+                <div className="flex-1 overflow-y-auto p-6 pb-24"> 
                     <AnimatePresence mode="wait">
                         <motion.div key={view + activeBranch} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }}>
                             {view === 'home' && <SmartHome role={role} setView={setView} branchData={branchData} />}
@@ -1051,7 +1050,7 @@ const Dashboard = ({ user, role, currentTenant, onChangeTenant, onLogout, market
                             {view === 'logistica' && <LogisticaView />}
                             {view === 'financeiro' && (role === 'Produtor' ? <CobreancaView /> : <FinanceiroCompleto role={role} />)}
                             {view === 'admin_finance' && <FinanceiroCompleto role={role} />}
-                            {view === 'cobranca' && <CobrancaView />}
+                            {view === 'cobranca' && <CobreancaView />}
                             {view === 'grains' && <GrainWalletView />}
                             {view === 'comunidade' && <CommunityView userEmail={user.email} />}
                             {view === 'chat' && <ChatModule title="Suporte Técnico" subtitle="Online agora" />}
@@ -1068,25 +1067,25 @@ const Dashboard = ({ user, role, currentTenant, onChangeTenant, onLogout, market
                 </div>
             </main>
 
-            {/* --- MENU MOBILE (GAVETA DE NAVEGAÇÃO) --- */}
+            {/* --- MENU MOBILE (GAVETA QUE SOBE) --- */}
             <AnimatePresence>
                 {showMobileMenu && (
                     <motion.div 
                         initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                        className="md:hidden fixed inset-0 z-40 bg-black/95 backdrop-blur-xl pt-16 px-6 pb-6 overflow-y-auto"
+                        className="md:hidden fixed inset-0 z-[60] bg-black/95 backdrop-blur-xl pt-10 px-6 pb-24 overflow-y-auto"
                     >
                         <div className="flex justify-between items-center mb-6">
                             <h2 className="text-2xl font-bold text-white">Menu Completo</h2>
-                            <button onClick={() => setShowMobileMenu(false)} className="p-2 bg-white/10 rounded-full"><X size={24} className="text-white"/></button>
+                            <button onClick={() => setShowMobileMenu(false)} className="p-2 bg-white/10 rounded-full text-white"><X size={24}/></button>
                         </div>
                         <div className="grid grid-cols-3 gap-4">
                             {menu.map(item => (
-                                <button key={item.id} onClick={() => { setView(item.id); setShowMobileMenu(false); }} className={`flex flex-col items-center gap-2 p-4 rounded-2xl border ${view === item.id ? 'bg-white/10 border-yellow-500/50 text-yellow-400' : 'bg-white/5 border-transparent text-white/50'}`}>
+                                <button key={item.id} onClick={() => { setView(item.id); setShowMobileMenu(false); }} className={`flex flex-col items-center gap-2 p-3 rounded-xl border ${view === item.id ? 'bg-white/10 border-yellow-500/50 text-yellow-400' : 'bg-white/5 border-transparent text-white/50'}`}>
                                     <item.icon size={24}/>
                                     <span className="text-[10px] font-medium text-center">{item.label}</span>
                                 </button>
                             ))}
-                            <button onClick={onLogout} className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-400">
+                            <button onClick={onLogout} className="flex flex-col items-center gap-2 p-3 rounded-xl bg-red-900/20 text-red-400 border border-red-900/50">
                                 <LogOut size={24}/>
                                 <span className="text-[10px] font-medium">Sair</span>
                             </button>
@@ -1097,14 +1096,14 @@ const Dashboard = ({ user, role, currentTenant, onChangeTenant, onLogout, market
 
             {/* --- BARRA INFERIOR (DOCK) --- */}
             <div className="md:hidden fixed bottom-0 w-full bg-[#002851]/95 backdrop-blur-xl border-t border-white/10 p-2 flex justify-around items-center z-50 pb-6 safe-area-bottom">
-                {/* Mostra os 4 primeiros itens */}
+                {/* Mostra os 4 primeiros itens do menu */}
                 {menu.slice(0, 4).map(item => (
-                    <button key={item.id} onClick={() => { setView(item.id); setShowMobileMenu(false); }} className={`p-3 rounded-xl transition ${view === item.id ? "text-yellow-400 bg-white/10" : "text-white/50"}`}>
+                    <button key={item.id} onClick={() => { setView(item.id); setShowMobileMenu(false); }} className={twMerge("p-3 rounded-xl transition", view === item.id ? "text-yellow-400 bg-white/10" : "text-white/50")}>
                         <item.icon size={24}/>
                     </button>
                 ))}
-                {/* Botão "Mais" para abrir a gaveta */}
-                <button onClick={() => setShowMobileMenu(true)} className={`p-3 rounded-xl transition ${showMobileMenu ? "text-yellow-400 bg-white/10" : "text-white/50"}`}>
+                {/* Botão "Mais" que abre a gaveta */}
+                <button onClick={() => setShowMobileMenu(true)} className={twMerge("p-3 rounded-xl transition text-white/50", showMobileMenu && "text-yellow-400 bg-white/10")}>
                     <Menu size={24}/>
                 </button>
             </div>
