@@ -882,6 +882,95 @@ const MarketplaceView = ({ goToChat, products, setView }) => {
     );
 };
 
+// --- MÓDULO DE VENDA DIRETA (AGRÔNOMO/NUTRIÇÃO) ---
+const DirectSalesView = ({ products, role }) => {
+    const [step, setStep] = useState('form'); // form, confirm, success
+    const [order, setOrder] = useState({ client: '', productId: '', qty: 1 });
+
+    // Filtra produtos baseado no papel (Agrônomo vê Químicos/Sementes, Nutrição vê Rações)
+    const availableProducts = products.filter(p => {
+        if (role === 'Téc. Nutrição') return p.tag === 'Nutrição';
+        if (role === 'Eng. Agrônomo') return p.tag !== 'Nutrição'; // Vê todo o resto
+        return true;
+    });
+
+    const selectedProduct = availableProducts.find(p => p.id == order.productId);
+    const total = selectedProduct ? (selectedProduct.price || 0) * order.qty : 0;
+
+    const handleSale = () => {
+        if (!order.client || !order.productId) return alert("Preencha cliente e produto.");
+        setStep('confirm');
+        setTimeout(() => {
+            setStep('success');
+            setTimeout(() => {
+                alert(`✅ Pedido Enviado!\n\nCliente: ${order.client}\nValor: ${formatCurrency(total)}\nNota Fiscal em processamento.`);
+                setStep('form');
+                setOrder({ client: '', productId: '', qty: 1 });
+            }, 2000);
+        }, 1500);
+    };
+
+    if (step === 'success') return <div className="flex flex-col items-center justify-center h-96 animate-in fade-in"><div className="w-24 h-24 bg-green-500 rounded-full flex items-center justify-center mb-6 shadow-lg shadow-green-500/50"><Check size={48} className="text-white"/></div><h3 className="text-3xl font-bold text-white">Venda Realizada!</h3><p className="text-white/50 mt-2">O pedido já está na expedição.</p></div>;
+
+    if (step === 'confirm') return <div className="flex flex-col items-center justify-center h-96 animate-in fade-in"><Loader size={48} className="text-blue-400 animate-spin mb-4"/><h3 className="text-xl font-bold text-white">Processando Pedido...</h3><p className="text-white/50">Verificando limite de crédito...</p></div>;
+
+    return (
+        <div className="space-y-6 animate-in fade-in">
+            <h2 className="text-3xl font-bold text-white flex items-center gap-2">
+                <ShoppingCart className={role === 'Téc. Nutrição' ? "text-pink-400" : "text-green-400"}/> Venda Rápida
+            </h2>
+            
+            <GlassCard className="border-t-4 border-blue-500">
+                <div className="space-y-4">
+                    {/* Seleção de Cliente */}
+                    <div>
+                        <label className="text-xs text-white/60 font-bold uppercase ml-2 mb-1 block">Produtor / Cliente</label>
+                        <select className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none [&>option]:bg-slate-900" value={order.client} onChange={e => setOrder({...order, client: e.target.value})}>
+                            <option value="">Selecione o Cooperado...</option>
+                            {MOCK_USERS.map(u => <option key={u.id} value={u.name}>{u.name} - {u.farm}</option>)}
+                        </select>
+                    </div>
+
+                    {/* Seleção de Produto */}
+                    <div>
+                        <label className="text-xs text-white/60 font-bold uppercase ml-2 mb-1 block">Produto ({role === 'Téc. Nutrição' ? 'Nutrição' : 'Insumos'})</label>
+                        <select className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none [&>option]:bg-slate-900" value={order.productId} onChange={e => setOrder({...order, productId: e.target.value})}>
+                            <option value="">Selecione o Produto...</option>
+                            {availableProducts.map(p => (
+                                <option key={p.id} value={p.id}>
+                                    {p.name} - {p.price > 0 ? formatCurrency(p.price) : 'Sob Consulta'}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* Quantidade e Total */}
+                    <div className="grid grid-cols-2 gap-4 items-end">
+                        <GlassInput label="Quantidade" type="number" value={order.qty} onChange={e => setOrder({...order, qty: e.target.value})} min="1"/>
+                        <div className="bg-white/10 rounded-2xl p-3 text-right border border-white/10">
+                            <p className="text-[10px] text-white/50 uppercase">Total Estimado</p>
+                            <p className="text-xl font-bold text-emerald-400">{formatCurrency(total)}</p>
+                        </div>
+                    </div>
+
+                    <NeonButton onClick={handleSale} className="w-full mt-4" variant="primary">
+                        <CheckCircle size={18}/> Confirmar Venda
+                    </NeonButton>
+                </div>
+            </GlassCard>
+
+            {/* Últimas Vendas Rápidas */}
+            <h3 className="font-bold text-white text-lg mt-4">Minhas Vendas Hoje</h3>
+            <div className="space-y-2 opacity-60">
+                <div className="bg-white/5 p-3 rounded-xl flex justify-between items-center">
+                    <div><p className="text-white font-bold text-sm">João da Silva</p><p className="text-xs text-white/50">5x Ração Destete</p></div>
+                    <span className="text-green-400 font-bold text-sm">R$ 412,50</span>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 // --- OUTRAS TELAS ---
 const ReceituarioView = () => (<div className="space-y-6 animate-in fade-in"><h2 className="text-3xl font-bold flex items-center gap-2 text-white"><FileSignature/> Receituário</h2><GlassCard><p className="text-white">Sistema de Emissão Digital</p><NeonButton className="mt-4">Novo Documento</NeonButton></GlassCard></div>);
 const LogisticaView = () => (<div className="space-y-6 animate-in fade-in"><h2 className="text-3xl font-bold flex gap-2 text-white"><Truck/> Frota</h2><GlassCard className="h-96 flex items-center justify-center border-dashed text-white"><MapPin size={48} className="mr-2"/> Mapa em Tempo Real</GlassCard></div>);
@@ -1012,35 +1101,90 @@ const PoolView = () => {
 };
 
 const RelatoriosView = () => (<div className="space-y-6 animate-in fade-in"><h2 className="text-3xl font-bold flex gap-2 text-white"><FileBarChart/> Relatórios</h2><div className="grid grid-cols-1 md:grid-cols-3 gap-4">{["Vendas", "Estoque", "Inadimplência"].map((r,i)=><GlassCard key={i} className="p-4 flex justify-between cursor-pointer hover:bg-white/10"><span className="font-bold text-white">{r}</span><Download size={16} className="text-white"/></GlassCard>)}</div></div>);
-// 2. MESA DE GRÃOS (TRADING E TRAVAS)
+// 2. MESA DE GRÃOS (TRADING COM GRÁFICO E ROBÔ)
 const TradingView = ({ role }) => {
-    // Dados Simulados de Mercado
+    const [selectedComm, setSelectedComm] = useState(1); // 1=Soja, 2=Milho, 3=Trigo
+    const [orders, setOrders] = useState([
+        { id: 101, commodity: 'Soja', target: 138.00, qty: 500, type: 'Físico', status: 'Aguardando', date: '28/11' }
+    ]);
+    const [newOrder, setNewOrder] = useState({ targetPrice: '', quantity: '', type: 'future' });
+
+    // DADOS COM HISTÓRICO PARA O GRÁFICO
     const commodities = [
-        { id: 1, name: 'Soja', price: 135.50, trend: 'up', variation: '+1.2%', icon: '🌱' },
-        { id: 2, name: 'Milho', price: 58.20, trend: 'down', variation: '-0.5%', icon: '🌽' },
-        { id: 3, name: 'Trigo', price: 82.00, trend: 'neutral', variation: '0.0%', icon: '🌾' }
+        { 
+            id: 1, name: 'Soja', price: 135.50, trend: 'up', variation: '+1.2%', icon: '🌱', harvest: 'Safra 24/25',
+            history: [128.5, 130.0, 129.2, 131.5, 133.0, 132.8, 135.5], // Últimos 7 dias
+            color: '#4ade80' // Verde
+        },
+        { 
+            id: 2, name: 'Milho', price: 58.20, trend: 'down', variation: '-0.5%', icon: '🌽', harvest: 'Safrinha 25',
+            history: [60.0, 59.5, 59.8, 59.0, 58.5, 58.0, 58.2], 
+            color: '#fbbf24' // Amarelo
+        },
+        { 
+            id: 3, name: 'Trigo', price: 82.00, trend: 'neutral', variation: '0.0%', icon: '🌾', harvest: 'Inverno 25',
+            history: [80.0, 81.2, 81.0, 82.5, 82.0, 81.8, 82.0],
+            color: '#f87171' // Vermelho/Laranja
+        }
     ];
 
-    const [orders, setOrders] = useState([
-        { id: 101, commodity: 'Soja', target: 138.00, qty: 500, status: 'Aguardando Mercado', date: '28/11' }
-    ]);
-    const [newOrder, setNewOrder] = useState({ commodityId: 1, targetPrice: '', quantity: '' });
+    const activeAsset = commodities.find(c => c.id === selectedComm);
+
+    // COMPONENTE DE GRÁFICO LEVE (SVG)
+    const MiniChart = ({ data, color }) => {
+        const max = Math.max(...data);
+        const min = Math.min(...data);
+        const range = max - min || 1;
+        
+        // Gera os pontos da linha (coordenadas X,Y)
+        const points = data.map((val, i) => {
+            const x = (i / (data.length - 1)) * 100;
+            const y = 100 - ((val - min) / range) * 80 - 10; // Margem de 10%
+            return `${x},${y}`;
+        }).join(' ');
+
+        return (
+            <div className="w-full h-40 mt-4 relative">
+                <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="w-full h-full overflow-visible">
+                    {/* Gradiente de Fundo */}
+                    <defs>
+                        <linearGradient id={`grad-${color}`} x1="0" x2="0" y1="0" y2="1">
+                            <stop offset="0%" stopColor={color} stopOpacity="0.3"/>
+                            <stop offset="100%" stopColor={color} stopOpacity="0"/>
+                        </linearGradient>
+                    </defs>
+                    <polygon points={`0,100 ${points} 100,100`} fill={`url(#grad-${color})`} />
+                    {/* Linha Principal */}
+                    <polyline points={points} fill="none" stroke={color} strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinecap="round" strokeLinejoin="round"/>
+                    {/* Pontos de Dados */}
+                    {data.map((val, i) => {
+                        const x = (i / (data.length - 1)) * 100;
+                        const y = 100 - ((val - min) / range) * 80 - 10;
+                        return <circle key={i} cx={x} cy={y} r="1.5" fill="#fff" stroke={color} strokeWidth="0.5"/>;
+                    })}
+                </svg>
+                {/* Indicadores de Máx/Min */}
+                <div className="absolute top-0 right-0 text-[10px] text-white/50 bg-black/40 px-2 rounded">Máx: {formatCurrency(max)}</div>
+                <div className="absolute bottom-0 right-0 text-[10px] text-white/50 bg-black/40 px-2 rounded">Mín: {formatCurrency(min)}</div>
+            </div>
+        );
+    };
 
     const handleCreateLock = () => {
-        if (!newOrder.targetPrice || !newOrder.quantity) return alert("Preencha preço e quantidade para armar a trava.");
+        if (!newOrder.targetPrice || !newOrder.quantity) return alert("Preencha todos os campos para ativar o robô.");
         
-        const comm = commodities.find(c => c.id == newOrder.commodityId);
         const order = {
             id: Date.now(),
-            commodity: comm.name,
+            commodity: activeAsset.name,
             target: parseFloat(newOrder.targetPrice),
             qty: parseInt(newOrder.quantity),
+            type: newOrder.type === 'physical' ? 'Saldo em Silo' : 'Venda Futura',
             status: 'Ativa (Monitorando)',
             date: 'Hoje'
         };
         
         setOrders([order, ...orders]);
-        alert(`🔒 Ordem de Venda Automática criada!\n\nSe a ${comm.name} atingir R$ ${order.target}, o sistema fechará o contrato automaticamente.`);
+        alert(`✅ Robô Configurado!\n\nSe a ${activeAsset.name} bater R$ ${order.target}, a venda será executada automaticamente.`);
         setNewOrder({ ...newOrder, targetPrice: '', quantity: '' });
     };
 
@@ -1048,72 +1192,83 @@ const TradingView = ({ role }) => {
         <div className="space-y-6 animate-in fade-in">
             <div className="flex justify-between items-center">
                  <h2 className="text-3xl font-bold flex gap-2 text-white"><Gavel className="text-amber-400"/> Mesa de Grãos</h2>
-                 <span className="bg-green-500/20 text-green-400 px-3 py-1 rounded-full text-xs font-bold border border-green-500/30 flex items-center gap-1 animate-pulse"><Activity size={14}/> Mercado Aberto</span>
+                 {/* Seletor de Grão */}
+                 <div className="flex bg-white/10 p-1 rounded-xl">
+                    {commodities.map(c => (
+                        <button 
+                            key={c.id} 
+                            onClick={() => setSelectedComm(c.id)}
+                            className={`px-3 py-1 rounded-lg text-xs font-bold transition ${selectedComm === c.id ? 'bg-white text-black shadow' : 'text-white/50 hover:text-white'}`}
+                        >
+                            {c.name}
+                        </button>
+                    ))}
+                 </div>
             </div>
 
-            {/* Cotações em Tempo Real */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {commodities.map(c => (
-                    <GlassCard key={c.id} className={`border-l-4 ${c.trend === 'up' ? 'border-green-500' : c.trend === 'down' ? 'border-red-500' : 'border-white/20'}`}>
-                        <div className="flex justify-between items-start">
-                            <div>
-                                <h4 className="font-bold text-white text-lg flex gap-2">{c.icon} {c.name}</h4>
-                                <p className="text-xs text-white/50">Saca 60kg (Balcão)</p>
-                            </div>
-                            <span className={`text-xs font-bold ${c.trend === 'up' ? 'text-green-400' : c.trend === 'down' ? 'text-red-400' : 'text-white/60'}`}>{c.variation}</span>
-                        </div>
-                        <div className="text-center py-4">
-                             <span className="text-4xl font-black text-white tracking-tighter">{formatCurrency(c.price)}</span>
-                        </div>
-                        <button className="w-full text-xs text-white/30 hover:text-white transition border-t border-white/10 pt-2">Ver Gráfico Chicago</button>
-                    </GlassCard>
-                ))}
-            </div>
+            {/* CARD PRINCIPAL (GRÁFICO) */}
+            <GlassCard className="border-l-4 border-white/20 relative overflow-hidden">
+                <div className="flex justify-between items-end relative z-10">
+                    <div>
+                        <p className="text-white/50 text-xs uppercase font-bold mb-1 flex items-center gap-1">{activeAsset.icon} {activeAsset.harvest}</p>
+                        <h3 className="text-5xl font-black text-white tracking-tighter">{formatCurrency(activeAsset.price)}</h3>
+                        <p className={`text-sm font-bold flex items-center gap-1 mt-1 ${activeAsset.trend === 'up' ? 'text-green-400' : 'text-red-400'}`}>
+                            <Activity size={14}/> {activeAsset.variation} nas últimas 24h
+                        </p>
+                    </div>
+                    <div className="text-right hidden md:block">
+                        <p className="text-xs text-white/40">Chicago (CBOT) - Delay 15min</p>
+                    </div>
+                </div>
 
-            {/* Área de Operação */}
+                {/* O Gráfico desenhado na hora */}
+                <MiniChart data={activeAsset.history} color={activeAsset.color} />
+            </GlassCard>
+
+            {/* FERRAMENTAS DE VENDA */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 
-                {/* Formulário de Trava */}
+                {/* Robô de Trava Automática */}
                 <GlassCard className="border-t-4 border-amber-500 bg-amber-900/10">
                     <h3 className="font-bold text-white mb-4 flex items-center gap-2"><LockKeyhole className="text-amber-400"/> Trava Automática (Target)</h3>
-                    <p className="text-sm text-white/60 mb-4">Defina seu preço alvo. O robô venderá para você quando o mercado bater o valor.</p>
                     
                     <div className="space-y-4">
-                        <div>
-                            <label className="text-xs text-white/60 uppercase font-bold ml-2">Produto</label>
-                            <select 
-                                className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none [&>option]:bg-slate-900"
-                                value={newOrder.commodityId}
-                                onChange={e => setNewOrder({...newOrder, commodityId: e.target.value})}
-                            >
-                                {commodities.map(c => <option key={c.id} value={c.id} className="bg-slate-900">{c.name}</option>)}
-                            </select>
+                        <div className="flex bg-black/40 p-1 rounded-xl">
+                            <button onClick={() => setNewOrder({...newOrder, type: 'future'})} className={`flex-1 py-2 rounded-lg text-xs font-bold transition ${newOrder.type === 'future' ? 'bg-amber-500 text-black' : 'text-white/50'}`}>🚜 Futura (Lavoura)</button>
+                            <button onClick={() => setNewOrder({...newOrder, type: 'physical'})} className={`flex-1 py-2 rounded-lg text-xs font-bold transition ${newOrder.type === 'physical' ? 'bg-amber-500 text-black' : 'text-white/50'}`}>🏭 Física (Silo)</button>
                         </div>
+
                         <div className="grid grid-cols-2 gap-4">
-                            <GlassInput label="Quantidade (Sacas)" type="number" value={newOrder.quantity} onChange={e=>setNewOrder({...newOrder, quantity: e.target.value})} placeholder="Ex: 1000"/>
-                            <GlassInput label="Preço Alvo (R$)" type="number" value={newOrder.targetPrice} onChange={e=>setNewOrder({...newOrder, targetPrice: e.target.value})} placeholder="Ex: 140.00"/>
+                            <GlassInput label="Qtd (Sacas)" type="number" value={newOrder.quantity} onChange={e=>setNewOrder({...newOrder, quantity: e.target.value})} placeholder="1000"/>
+                            <GlassInput label="Preço Alvo (R$)" type="number" value={newOrder.targetPrice} onChange={e=>setNewOrder({...newOrder, targetPrice: e.target.value})} placeholder="140.00"/>
                         </div>
-                        <NeonButton onClick={handleCreateLock} variant="accent" className="w-full mt-2">Armar Gatilho de Venda</NeonButton>
+                        
+                        <div className="flex justify-between text-[10px] text-white/40 px-1">
+                            <span>Atual: {formatCurrency(activeAsset.price)}</span>
+                            <span>Total Est.: {formatCurrency((newOrder.targetPrice || 0) * (newOrder.quantity || 0))}</span>
+                        </div>
+
+                        <NeonButton onClick={handleCreateLock} variant="accent" className="w-full mt-2">Armar Robô de Venda</NeonButton>
                     </div>
                 </GlassCard>
 
-                {/* Lista de Ordens */}
+                {/* Carteira de Ordens */}
                 <GlassCard>
-                    <div className="flex justify-between items-center mb-4">
-                        <h3 className="font-bold text-white">Minhas Ordens</h3>
-                        <Filter size={16} className="text-white/30"/>
-                    </div>
-                    <div className="space-y-3 max-h-[300px] overflow-y-auto custom-scrollbar">
-                        {orders.length === 0 && <p className="text-white/30 text-center py-8 italic">Nenhuma ordem ativa.</p>}
+                    <div className="flex justify-between items-center mb-4"><h3 className="font-bold text-white">Minhas Ordens</h3><Filter size={16} className="text-white/30"/></div>
+                    <div className="space-y-3 max-h-[280px] overflow-y-auto custom-scrollbar">
+                        {orders.length === 0 && <p className="text-white/30 text-center py-8 text-xs">Nenhuma ordem ativa.</p>}
                         {orders.map(o => (
                             <div key={o.id} className="bg-white/5 p-3 rounded-xl border border-white/10 flex justify-between items-center group hover:bg-white/10 transition">
                                 <div>
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${o.type.includes('Futura') ? 'bg-blue-500/20 text-blue-300' : 'bg-orange-500/20 text-orange-300'}`}>{o.type}</span>
+                                        <span className="text-[10px] text-white/30">{o.date}</span>
+                                    </div>
                                     <p className="font-bold text-white">{o.commodity} <span className="text-xs text-white/50">({o.qty} sc)</span></p>
                                     <p className="text-xs text-amber-400 font-mono font-bold">Alvo: {formatCurrency(o.target)}</p>
-                                    <p className="text-[10px] text-white/30">{o.date}</p>
                                 </div>
                                 <div className="text-right">
-                                    <span className="text-[10px] bg-blue-500/20 text-blue-300 px-2 py-1 rounded border border-blue-500/30 uppercase font-bold">{o.status}</span>
+                                    <span className="text-[10px] bg-green-500/10 text-green-400 px-2 py-1 rounded border border-green-500/20 uppercase font-bold">{o.status}</span>
                                     <button className="block text-[10px] text-red-400 mt-2 hover:underline w-full text-right">Cancelar</button>
                                 </div>
                             </div>
@@ -1508,6 +1663,7 @@ const Dashboard = ({ user, role, currentTenant, onChangeTenant, onLogout, market
     const Logo = currentTenant.logo;
 
     const menu = [
+        { id: 'venda_direta', icon: ShoppingCart, label: 'Venda Rápida', roles: ['Eng. Agrônomo', 'Téc. Nutrição', 'Coord. Regional'] },
         { id: 'home', icon: Home, label: 'Visão Geral', roles: ['Admin', 'Coord. Regional', 'Coord. Unidade', 'Operador', 'Produtor', 'Estoquista', 'Eng. Agrônomo', 'Téc. Nutrição', 'Assist. Administrativo', 'Motorista', 'Téc. Segurança', 'Supervisor Armazém'] },
         { id: 'marketplace', icon: ShoppingBag, label: 'Loja', roles: ['Produtor', 'Téc. Nutrição'] },
         { id: 'grains', icon: Wheat, label: 'Grãos', roles: ['Produtor', 'Coord. Regional', 'Coord. Unidade', 'Admin'] },
@@ -1569,6 +1725,7 @@ const Dashboard = ({ user, role, currentTenant, onChangeTenant, onLogout, market
                 <div className="flex-1 overflow-y-auto p-6 pb-24">
                     <AnimatePresence mode="wait">
                         <motion.div key={view + activeBranch} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }}>
+                            {view === 'venda_direta' && <DirectSalesView products={marketProducts} role={role} />}
                             {view === 'home' && <SmartHome role={role} setView={setView} branchData={branchData} activeBranch={activeBranch} />}
                             {view === 'estoque' && <EstoqueView userId={user.uid} inventory={[]} role={role} activeBranch={activeBranch} />}
                             {view === 'agrilens' && <AgriLensView setView={setView} setChatContext={setChatContext}/>}
