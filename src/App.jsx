@@ -9,7 +9,7 @@ import {
     BarChart3, Activity, ShoppingBag, Megaphone, ArrowRightLeft, Filter,
     Lock, Mail, FileSignature, QrCode, Gavel, Scale, ScanEye, Users, Siren, PieChart, LineChart,
     Hash, Download, BoxSelect, Wrench, Split, Landmark, FileUp, RefreshCw, Check, Newspaper, 
-    Bell, Database, Layers, Coffee, Wheat, ChevronDown, Smartphone, UserCheck, PlusCircle, 
+    Bell, Database, Layers, Coffee, Wheat, ChevronDown, Smartphone, UserCheck, PlusCircle,Gauge, Signal, Fuel, Map, 
     LockKeyhole, Pill, Banknote, Milk, Users2, HardHat, ScanFace, ShieldAlert, MessageSquare, Navigation, FileBarChart, PackageCheck, History, AlertCircle, Calendar, Briefcase, Sparkles, ArrowRight, X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -882,37 +882,38 @@ const MarketplaceView = ({ goToChat, products, setView }) => {
     );
 };
 
-// --- MÓDULO DE VENDA DIRETA (AGRÔNOMO/NUTRIÇÃO) ---
+// --- MÓDULO DE VENDA DIRETA (AGRÔNOMO/NUTRIÇÃO) - COMPLETO ---
 const DirectSalesView = ({ products, role }) => {
-    const [step, setStep] = useState('form'); // form, confirm, success
-    const [order, setOrder] = useState({ client: '', productId: '', qty: 1 });
+    const [step, setStep] = useState('form'); 
+    // ADICIONADO: payment e delivery
+    const [order, setOrder] = useState({ client: '', productId: '', qty: 1, payment: 'safra', delivery: 'retira' });
 
-    // Filtra produtos baseado no papel (Agrônomo vê Químicos/Sementes, Nutrição vê Rações)
     const availableProducts = products.filter(p => {
         if (role === 'Téc. Nutrição') return p.tag === 'Nutrição';
-        if (role === 'Eng. Agrônomo') return p.tag !== 'Nutrição'; // Vê todo o resto
-        return true;
+        if (role === 'Eng. Agrônomo') return p.tag !== 'Nutrição'; 
+        return true; 
     });
 
     const selectedProduct = availableProducts.find(p => p.id == order.productId);
     const total = selectedProduct ? (selectedProduct.price || 0) * order.qty : 0;
 
     const handleSale = () => {
-        if (!order.client || !order.productId) return alert("Preencha cliente e produto.");
+        if (!order.client || !order.productId) return alert("Preencha os dados do pedido.");
         setStep('confirm');
         setTimeout(() => {
             setStep('success');
             setTimeout(() => {
-                alert(`✅ Pedido Enviado!\n\nCliente: ${order.client}\nValor: ${formatCurrency(total)}\nNota Fiscal em processamento.`);
+                // Mensagem mais completa
+                alert(`✅ Pedido Realizado!\n\nCliente: ${order.client}\nTotal: ${formatCurrency(total)}\nPagamento: ${order.payment.toUpperCase()}\nEntrega: ${order.delivery.toUpperCase()}\n\nO pedido seguiu para faturamento.`);
                 setStep('form');
-                setOrder({ client: '', productId: '', qty: 1 });
+                setOrder({ client: '', productId: '', qty: 1, payment: 'safra', delivery: 'retira' });
             }, 2000);
         }, 1500);
     };
 
-    if (step === 'success') return <div className="flex flex-col items-center justify-center h-96 animate-in fade-in"><div className="w-24 h-24 bg-green-500 rounded-full flex items-center justify-center mb-6 shadow-lg shadow-green-500/50"><Check size={48} className="text-white"/></div><h3 className="text-3xl font-bold text-white">Venda Realizada!</h3><p className="text-white/50 mt-2">O pedido já está na expedição.</p></div>;
+    if (step === 'success') return <div className="flex flex-col items-center justify-center h-96 animate-in fade-in"><div className="w-24 h-24 bg-green-500 rounded-full flex items-center justify-center mb-6 shadow-lg shadow-green-500/50"><Check size={48} className="text-white"/></div><h3 className="text-3xl font-bold text-white">Sucesso!</h3><p className="text-white/50 mt-2">Pedido #4402 gerado.</p></div>;
 
-    if (step === 'confirm') return <div className="flex flex-col items-center justify-center h-96 animate-in fade-in"><Loader size={48} className="text-blue-400 animate-spin mb-4"/><h3 className="text-xl font-bold text-white">Processando Pedido...</h3><p className="text-white/50">Verificando limite de crédito...</p></div>;
+    if (step === 'confirm') return <div className="flex flex-col items-center justify-center h-96 animate-in fade-in"><Loader size={48} className="text-blue-400 animate-spin mb-4"/><h3 className="text-xl font-bold text-white">Reservando Estoque...</h3><p className="text-white/50">Validando limite de crédito...</p></div>;
 
     return (
         <div className="space-y-6 animate-in fade-in">
@@ -922,51 +923,59 @@ const DirectSalesView = ({ products, role }) => {
             
             <GlassCard className="border-t-4 border-blue-500">
                 <div className="space-y-4">
-                    {/* Seleção de Cliente */}
+                    {/* Cliente */}
                     <div>
-                        <label className="text-xs text-white/60 font-bold uppercase ml-2 mb-1 block">Produtor / Cliente</label>
+                        <label className="text-xs text-white/60 font-bold uppercase ml-2 mb-1 block">Cliente</label>
                         <select className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none [&>option]:bg-slate-900" value={order.client} onChange={e => setOrder({...order, client: e.target.value})}>
                             <option value="">Selecione o Cooperado...</option>
                             {MOCK_USERS.map(u => <option key={u.id} value={u.name}>{u.name} - {u.farm}</option>)}
                         </select>
                     </div>
 
-                    {/* Seleção de Produto */}
+                    {/* Produto */}
                     <div>
-                        <label className="text-xs text-white/60 font-bold uppercase ml-2 mb-1 block">Produto ({role === 'Téc. Nutrição' ? 'Nutrição' : 'Insumos'})</label>
+                        <label className="text-xs text-white/60 font-bold uppercase ml-2 mb-1 block">Produto</label>
                         <select className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none [&>option]:bg-slate-900" value={order.productId} onChange={e => setOrder({...order, productId: e.target.value})}>
-                            <option value="">Selecione o Produto...</option>
-                            {availableProducts.map(p => (
-                                <option key={p.id} value={p.id}>
-                                    {p.name} - {p.price > 0 ? formatCurrency(p.price) : 'Sob Consulta'}
-                                </option>
-                            ))}
+                            <option value="">Selecione...</option>
+                            {availableProducts.map(p => (<option key={p.id} value={p.id}>{p.name} - {formatCurrency(p.price)}</option>))}
                         </select>
                     </div>
 
-                    {/* Quantidade e Total */}
+                    {/* Quantidade e Pagamento (Lado a Lado) */}
+                    <div className="grid grid-cols-2 gap-4">
+                        <GlassInput label="Qtd" type="number" value={order.qty} onChange={e => setOrder({...order, qty: e.target.value})} min="1"/>
+                        
+                        <div>
+                            <label className="text-xs text-white/60 font-bold uppercase ml-2 mb-1 block">Pagamento</label>
+                            <select className="w-full bg-black/30 border border-white/10 rounded-2xl px-4 py-3.5 text-white focus:outline-none [&>option]:bg-slate-900" value={order.payment} onChange={e => setOrder({...order, payment: e.target.value})}>
+                                <option value="safra">🌾 Safra 2025</option>
+                                <option value="30d">📅 30 Dias</option>
+                                <option value="avista">💵 À Vista (Pix)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    {/* Entrega e Total */}
                     <div className="grid grid-cols-2 gap-4 items-end">
-                        <GlassInput label="Quantidade" type="number" value={order.qty} onChange={e => setOrder({...order, qty: e.target.value})} min="1"/>
+                         <div>
+                            <label className="text-xs text-white/60 font-bold uppercase ml-2 mb-1 block">Logística</label>
+                            <select className="w-full bg-black/30 border border-white/10 rounded-2xl px-4 py-3.5 text-white focus:outline-none [&>option]:bg-slate-900" value={order.delivery} onChange={e => setOrder({...order, delivery: e.target.value})}>
+                                <option value="retira">🏭 Retira na Loja</option>
+                                <option value="entrega">🚚 Entregar na Fazenda</option>
+                            </select>
+                        </div>
+
                         <div className="bg-white/10 rounded-2xl p-3 text-right border border-white/10">
-                            <p className="text-[10px] text-white/50 uppercase">Total Estimado</p>
+                            <p className="text-[10px] text-white/50 uppercase">Total Pedido</p>
                             <p className="text-xl font-bold text-emerald-400">{formatCurrency(total)}</p>
                         </div>
                     </div>
 
                     <NeonButton onClick={handleSale} className="w-full mt-4" variant="primary">
-                        <CheckCircle size={18}/> Confirmar Venda
+                        <CheckCircle size={18}/> Fechar Pedido
                     </NeonButton>
                 </div>
             </GlassCard>
-
-            {/* Últimas Vendas Rápidas */}
-            <h3 className="font-bold text-white text-lg mt-4">Minhas Vendas Hoje</h3>
-            <div className="space-y-2 opacity-60">
-                <div className="bg-white/5 p-3 rounded-xl flex justify-between items-center">
-                    <div><p className="text-white font-bold text-sm">João da Silva</p><p className="text-xs text-white/50">5x Ração Destete</p></div>
-                    <span className="text-green-400 font-bold text-sm">R$ 412,50</span>
-                </div>
-            </div>
         </div>
     );
 };
@@ -1433,13 +1442,476 @@ const EstoqueView = ({ role, activeBranch }) => {
     );
 };
 
-// --- HOMES ---
-const DirectorHome = ({ setView, branchData }) => (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-in fade-in"><GlassCard className="cursor-pointer hover:bg-white/5" onClick={() => setView('estoque')}><h3 className="font-bold text-lg text-white">Estoque</h3><p className="text-2xl font-bold text-white">{branchData.stock}</p></GlassCard><GlassCard className="cursor-pointer hover:bg-white/5" onClick={() => setView('financeiro')}><h3 className="font-bold text-lg text-white">Vendas</h3><p className="text-2xl font-bold text-white">{branchData.sales}</p></GlassCard><GlassCard className="cursor-pointer hover:bg-white/5" onClick={() => setView('logistica')}><h3 className="font-bold text-lg text-white">Logística</h3><p className="text-2xl font-bold text-white">{branchData.trucks}</p></GlassCard></div>
-);
-const ProducerHome = ({ setView }) => (
-    <div className="space-y-6 animate-in fade-in"><div className="grid grid-cols-1 md:grid-cols-3 gap-6"><AgriNewsWidget /><WeatherWidget /><TaskWidget onClick={() => setView('chat')} /><FinanceWidget onClick={() => setView('financeiro')} /><GlassCard className="col-span-2 border-l-4 border-yellow-500 flex justify-between items-center cursor-pointer" onClick={() => setView('marketplace')}><div><h3 className="text-xl font-bold text-white">Loja Cotribá</h3><p className="text-sm opacity-70 text-white">Insumos disponíveis.</p></div><Tractor size={64} className="opacity-20 text-white"/></GlassCard><div className="col-span-full grid grid-cols-2 md:grid-cols-4 gap-4"><button onClick={() => setView('chat')} className="p-6 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/5 flex flex-col items-center gap-2 text-white"><MessageCircle/><span className="text-xs">Consultor</span></button><button onClick={() => setView('agrilens')} className="p-6 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/5 flex flex-col items-center gap-2 text-white"><ScanEye/><span className="text-xs">AgriLens</span></button><button onClick={() => setView('pool')} className="p-6 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/5 flex flex-col items-center gap-2 text-white"><Users/><span className="text-xs">Pool</span></button><button onClick={() => setView('marketplace')} className="p-6 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/5 flex flex-col items-center gap-2 text-white"><ShoppingBag/><span className="text-xs">Loja</span></button></div></div></div>
-);
+// --- HOMES (COORDENADOR DE UNIDADE - RICARDO) ---
+const CoordinatorHome = ({ setView, branchData }) => {
+    const [activeTab, setActiveTab] = useState('dashboard'); // dashboard, sede, clientes, pool_criador, travas
+    const [searchTerm, setSearchTerm] = useState('');
+    const [searchResult, setSearchResult] = useState(null);
+    
+    // DADOS MOCKADOS: TRAVAS DE GRÃOS (ORIGINAÇÃO)
+    const grainLocks = [
+        { id: 1, produtor: "João da Silva", produto: "Soja", qtd: "1.000 sc", alvo: "R$ 138,00", status: "Aguardando Mercado" },
+        { id: 2, produtor: "Agro Santos", produto: "Trigo", qtd: "500 sc", alvo: "R$ 85,00", status: "Executado" },
+        { id: 3, produtor: "Sítio Alvorada", produto: "Milho", qtd: "2.000 sc", alvo: "R$ 60,00", status: "Aguardando Mercado" }
+    ];
+
+    // DADOS MOCKADOS: ESTOQUE DA SEDE (IBIRUBÁ)
+    const matrizStock = [
+        { id: 1, name: "Ureia Agrícola", qtd: 15000, unit: "Sacos" },
+        { id: 2, name: "Glifosato 480", qtd: 5000, unit: "Litros" },
+        { id: 3, name: "Semente Soja Intacta", qtd: 800, unit: "Sacos" }
+    ];
+
+    // ESTADO PARA NOVA CAMPANHA
+    const [newCampaign, setNewCampaign] = useState({ name: '', target: '', discountPrice: '' });
+
+    const handleCreateCampaign = () => {
+        if(!newCampaign.name || !newCampaign.target) return alert("Preencha os dados da campanha.");
+        alert(`🚀 Campanha "${newCampaign.name}" lançada para a base de produtores!\nMeta: ${newCampaign.target}`);
+        setNewCampaign({ name: '', target: '', discountPrice: '' });
+    };
+
+    const handleSearchClient = () => {
+        if (!searchTerm) return;
+        setSearchResult({
+            name: "João da Silva", doc: "000.123.456-78", score: "A",
+            debt: "R$ 15.200", limit: "R$ 150.000"
+        });
+    };
+
+    return (
+        <div className="space-y-6 animate-in fade-in">
+            {/* CABEÇALHO FIXO SÃO FRANCISCO */}
+            <div className="flex flex-col gap-4">
+                <div className="flex justify-between items-center">
+                    <div>
+                        <h2 className="text-3xl font-bold text-white flex items-center gap-2"><Building2 className="text-blue-400"/> Gestão Unidade</h2>
+                        <p className="text-xs text-white/50">Filial: <strong className="text-green-400">São Francisco de Assis</strong></p>
+                    </div>
+                    <div className="text-right hidden md:block"><p className="text-[10px] text-white/40 uppercase">Meta do Mês</p><p className="text-2xl font-bold text-green-400">92%</p></div>
+                </div>
+                
+                {/* MENU DO COORDENADOR */}
+                <div className="flex gap-2 bg-black/20 p-1 rounded-xl overflow-x-auto no-scrollbar">
+                    {['dashboard', 'sede', 'clientes', 'pool_criador', 'travas'].map(tab => (
+                        <button key={tab} onClick={() => setActiveTab(tab)} className={`flex-1 px-4 py-2 rounded-lg text-xs font-bold uppercase whitespace-nowrap transition ${activeTab === tab ? 'bg-blue-600 text-white shadow-lg' : 'text-white/50 hover:text-white'}`}>
+                            {tab === 'dashboard' ? 'Visão Geral' : tab === 'sede' ? 'Estoque Matriz' : tab === 'pool_criador' ? 'Criar Campanha' : tab === 'travas' ? 'Originação' : 'Clientes'}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            {/* --- ABA 1: DASHBOARD LOCAL --- */}
+            {activeTab === 'dashboard' && (
+                <>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <GlassCard className="cursor-pointer hover:bg-white/5 border-l-4 border-green-500" onClick={() => setView('estoque')}>
+                            <div className="flex justify-between"><div><p className="text-white/60 text-xs">Estoque Local</p><h3 className="text-2xl font-black text-white">{branchData.stock}</h3></div><Package className="text-green-400"/></div>
+                        </GlassCard>
+                        <GlassCard className="cursor-pointer hover:bg-white/5 border-l-4 border-blue-500" onClick={() => setView('financeiro')}>
+                            <div className="flex justify-between"><div><p className="text-white/60 text-xs">Vendas Hoje</p><h3 className="text-2xl font-black text-white">{branchData.sales}</h3></div><ShoppingBag className="text-blue-400"/></div>
+                        </GlassCard>
+                        <GlassCard className="cursor-pointer hover:bg-white/5 border-l-4 border-yellow-500" onClick={() => setView('logistica')}>
+                            <div className="flex justify-between"><div><p className="text-white/60 text-xs">Pátio</p><h3 className="text-2xl font-black text-white">{branchData.trucks} Caminhões</h3></div><Truck className="text-yellow-400"/></div>
+                        </GlassCard>
+                    </div>
+                </>
+            )}
+
+            {/* --- ABA 2: CONSULTA ESTOQUE SEDE --- */}
+            {activeTab === 'sede' && (
+                <div className="space-y-4">
+                    <div className="bg-blue-900/20 border border-blue-500/30 p-4 rounded-2xl">
+                        <h3 className="font-bold text-white mb-1 flex items-center gap-2"><Search size={18}/> Estoque Central (Ibirubá)</h3>
+                        <p className="text-xs text-white/60">Consulte antes de solicitar transferência.</p>
+                    </div>
+                    <div className="grid gap-2">
+                        {matrizStock.map(i => (
+                            <GlassCard key={i.id} className="p-3 flex justify-between items-center">
+                                <span className="text-white font-bold text-sm">{i.name}</span>
+                                <span className="text-green-400 font-mono">{i.qtd} {i.unit}</span>
+                            </GlassCard>
+                        ))}
+                    </div>
+                    <NeonButton className="w-full mt-2 text-xs h-10">Solicitar Transferência</NeonButton>
+                </div>
+            )}
+
+            {/* --- ABA 3: CRIADOR DE CAMPANHAS (POOL) --- */}
+            {activeTab === 'pool_criador' && (
+                <GlassCard className="border-t-4 border-teal-500">
+                    <h3 className="font-bold text-white mb-4 flex items-center gap-2"><Megaphone className="text-teal-400"/> Lançar Nova Campanha</h3>
+                    <div className="space-y-4">
+                        <GlassInput label="Nome do Produto (Ex: Glifosato)" value={newCampaign.name} onChange={e=>setNewCampaign({...newCampaign, name:e.target.value})}/>
+                        <div className="grid grid-cols-2 gap-4">
+                            <GlassInput label="Meta (Qtd)" type="number" value={newCampaign.target} onChange={e=>setNewCampaign({...newCampaign, target:e.target.value})}/>
+                            <GlassInput label="Preço Promocional" type="number" value={newCampaign.discountPrice} onChange={e=>setNewCampaign({...newCampaign, discountPrice:e.target.value})}/>
+                        </div>
+                        <div className="bg-teal-900/20 p-3 rounded-xl text-xs text-teal-200 border border-teal-500/20">
+                            ℹ️ A campanha aparecerá para todos os produtores da unidade. O desconto só ativa ao bater a meta.
+                        </div>
+                        <NeonButton onClick={handleCreateCampaign} variant="accent" className="w-full">Publicar no App</NeonButton>
+                    </div>
+                </GlassCard>
+            )}
+
+            {/* --- ABA 4: MONITOR DE TRAVAS (GRÃOS) --- */}
+            {activeTab === 'travas' && (
+                <div className="space-y-4">
+                    <h3 className="font-bold text-white flex gap-2 items-center"><Lock size={18}/> Monitor de Originação</h3>
+                    {grainLocks.map(lock => (
+                        <GlassCard key={lock.id} className="flex justify-between items-center p-3 border-l-4 border-amber-500">
+                            <div>
+                                <h4 className="font-bold text-white text-sm">{lock.produtor}</h4>
+                                <p className="text-xs text-white/50">{lock.produto} • {lock.qtd}</p>
+                            </div>
+                            <div className="text-right">
+                                <p className="text-amber-400 font-mono font-bold">{lock.alvo}</p>
+                                <span className="text-[9px] uppercase bg-white/10 px-2 py-0.5 rounded text-white/60">{lock.status}</span>
+                            </div>
+                        </GlassCard>
+                    ))}
+                </div>
+            )}
+
+            {/* --- ABA 5: CLIENTES --- */}
+            {activeTab === 'clientes' && (
+                <div className="space-y-4">
+                    <div className="relative">
+                        <input value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Buscar Produtor..." className="w-full bg-black/30 border border-white/10 rounded-2xl pl-4 pr-12 py-3 text-white focus:outline-none"/>
+                        <button onClick={handleSearchClient} className="absolute right-2 top-2 p-1.5 bg-blue-600 rounded-lg text-white"><Search size={16}/></button>
+                    </div>
+                    {searchResult && (
+                        <GlassCard className="border-t-4 border-green-500 animate-in fade-in">
+                            <div className="flex justify-between"><h3 className="font-bold text-white">{searchResult.name}</h3><span className="bg-green-500/20 text-green-400 text-xs px-2 rounded">{searchResult.score}</span></div>
+                            <div className="grid grid-cols-2 gap-4 mt-4 text-xs">
+                                <div><p className="text-white/40">Dívida</p><p className="text-red-400 font-bold">{searchResult.debt}</p></div>
+                                <div><p className="text-white/40">Limite</p><p className="text-green-400 font-bold">{searchResult.limit}</p></div>
+                            </div>
+                            <div className="mt-4 flex gap-2"><button className="flex-1 py-2 bg-white/10 rounded text-xs text-white">Ver Ficha</button><button className="flex-1 py-2 bg-white/10 rounded text-xs text-white">Histórico</button></div>
+                        </GlassCard>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+};
+
+// --- MÓDULO TELEMETRIA E IOT (VITALIS CONNECT) ---
+const TelemetryView = () => {
+    const [activeMachine, setActiveMachine] = useState(1);
+    const [isConnecting, setIsConnecting] = useState(false);
+
+    // DADOS MOCKADOS: FROTA CONECTADA
+    const fleet = [
+        { id: 1, name: "John Deere S700", type: "Colheitadeira", status: "Operando", fuel: "68%", speed: "5.4 km/h", yield: "72 sc/ha", lat: 30, lng: 40, brandColor: "text-green-500" },
+        { id: 2, name: "Case Magnum 340", type: "Trator", status: "Parado (Abastecimento)", fuel: "12%", speed: "0.0 km/h", yield: "-", lat: 60, lng: 70, brandColor: "text-red-500" },
+        { id: 3, name: "New Holland T7", type: "Pulverizador", status: "Operando", fuel: "85%", speed: "18.0 km/h", yield: "-", lat: 45, lng: 20, brandColor: "text-blue-400" }
+    ];
+
+    const currentMachine = fleet.find(m => m.id === activeMachine);
+
+    const handleConnect = () => {
+        setIsConnecting(true);
+        setTimeout(() => {
+            setIsConnecting(false);
+            alert("✅ Conexão via API John Deere Operations Center estabelecida com sucesso!");
+        }, 2000);
+    };
+
+    return (
+        <div className="space-y-6 animate-in fade-in">
+            <div className="flex justify-between items-center">
+                <h2 className="text-3xl font-bold text-white flex items-center gap-2">
+                    <Signal className="text-blue-400"/> Telemetria em Tempo Real
+                </h2>
+                <div className="flex items-center gap-2">
+                    <span className="flex h-3 w-3 relative">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                    </span>
+                    <span className="text-xs text-green-400 font-bold uppercase">Sinal GPS: Forte</span>
+                </div>
+            </div>
+
+            {/* MAPA TÁTICO (SIMULAÇÃO VISUAL) */}
+            <GlassCard className="p-0 h-96 relative overflow-hidden border-t-4 border-blue-500 bg-[#0f172a]">
+                {/* Fundo do Mapa (Estilizado) */}
+                <div className="absolute inset-0 opacity-30" style={{ 
+                    backgroundImage: 'radial-gradient(#334155 1px, transparent 1px)', 
+                    backgroundSize: '20px 20px' 
+                }}></div>
+                
+                {/* Desenho dos Talhões (Simulação) */}
+                <div className="absolute top-10 left-10 w-64 h-40 border-2 border-green-500/30 bg-green-500/10 rounded-xl transform rotate-3 flex items-center justify-center text-green-500/20 font-bold text-4xl">TALHÃO A</div>
+                <div className="absolute bottom-20 right-10 w-56 h-56 border-2 border-yellow-500/30 bg-yellow-500/10 rounded-full flex items-center justify-center text-yellow-500/20 font-bold text-4xl">TALHÃO B</div>
+
+                {/* Máquinas no Mapa */}
+                {fleet.map(m => (
+                    <motion.div 
+                        key={m.id}
+                        layout
+                        initial={{ x: m.lng * 3, y: m.lat * 3 }}
+                        animate={{ 
+                            x: activeMachine === m.id ? [m.lng * 3, m.lng * 3 + 20, m.lng * 3] : m.lng * 3,
+                            scale: activeMachine === m.id ? 1.2 : 1 
+                        }}
+                        transition={{ duration: 4, repeat: Infinity }}
+                        onClick={() => setActiveMachine(m.id)}
+                        className={`absolute cursor-pointer flex flex-col items-center gap-1 z-20`}
+                        style={{ top: `${m.lat}%`, left: `${m.lng}%` }}
+                    >
+                        <div className={`p-2 rounded-full shadow-xl border-2 ${activeMachine === m.id ? 'bg-white border-blue-500' : 'bg-slate-800 border-white/20'}`}>
+                            <Tractor size={20} className={activeMachine === m.id ? 'text-black' : 'text-white'}/>
+                        </div>
+                        <span className="text-[10px] bg-black/80 text-white px-2 py-0.5 rounded whitespace-nowrap">{m.name}</span>
+                    </motion.div>
+                ))}
+
+                {/* Painel Flutuante de Dados */}
+                <div className="absolute bottom-4 left-4 right-4 bg-black/80 backdrop-blur-md p-4 rounded-2xl border border-white/10 flex justify-between items-center">
+                    <div className="flex items-center gap-4">
+                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center bg-white/10 text-2xl`}>
+                            {currentMachine.type === 'Colheitadeira' ? '🌾' : '🚜'}
+                        </div>
+                        <div>
+                            <h4 className="font-bold text-white">{currentMachine.name}</h4>
+                            <p className={`text-xs font-bold ${currentMachine.status.includes('Parado') ? 'text-red-400' : 'text-green-400'}`}>
+                                ● {currentMachine.status}
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div className="flex gap-6 text-center">
+                        <div>
+                            <p className="text-[10px] text-white/50 uppercase flex justify-center gap-1"><Fuel size={10}/> Diesel</p>
+                            <p className="text-white font-mono font-bold">{currentMachine.fuel}</p>
+                        </div>
+                        <div>
+                            <p className="text-[10px] text-white/50 uppercase flex justify-center gap-1"><Gauge size={10}/> Veloc.</p>
+                            <p className="text-white font-mono font-bold">{currentMachine.speed}</p>
+                        </div>
+                        {currentMachine.yield !== '-' && (
+                            <div className="hidden md:block">
+                                <p className="text-[10px] text-white/50 uppercase">Produtividade</p>
+                                <p className="text-yellow-400 font-mono font-bold">{currentMachine.yield}</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </GlassCard>
+
+            {/* BOTÃO DE INTEGRAÇÃO */}
+            <div className="flex justify-between items-center bg-white/5 p-4 rounded-2xl border border-white/10">
+                <div className="flex items-center gap-3">
+                    <Cloud className="text-blue-400"/>
+                    <div>
+                        <h4 className="font-bold text-white text-sm">Nuvem de Máquinas</h4>
+                        <p className="text-xs text-white/50">Sincronização com John Deere & Case IH</p>
+                    </div>
+                </div>
+                <NeonButton onClick={handleConnect} variant="secondary" className="text-xs h-8" disabled={isConnecting}>
+                    {isConnecting ? "Sincronizando..." : "Atualizar Frota"}
+                </NeonButton>
+            </div>
+        </div>
+    );
+};
+
+// --- HOMES (DIRETORIA / REGIONAL - SEM APROVAÇÃO FINANCEIRA) ---
+const DirectorHome = ({ setView, branchData, activeBranch }) => {
+    const [activeTab, setActiveTab] = useState('dashboard'); // dashboard, estoque_sede, clientes
+    const [searchTerm, setSearchTerm] = useState('');
+    const [stockSearch, setStockSearch] = useState('');
+    const [searchResult, setSearchResult] = useState(null);
+
+    // DADOS MOCKADOS: ESTOQUE DA SEDE (IBIRUBÁ) PARA CONSULTA RÁPIDA
+    const matrizStock = [
+        { id: 1, name: "Ureia Agrícola", qtd: 15000, unit: "Sacos", status: "Alto" },
+        { id: 2, name: "Glifosato 480", qtd: 5000, unit: "Litros", status: "Médio" },
+        { id: 3, name: "Semente Soja Intacta", qtd: 800, unit: "Sacos", status: "Baixo" },
+        { id: 4, name: "Freno 240", qtd: 2000, unit: "Litros", status: "Alto" },
+        { id: 5, name: "Arame Farpado", qtd: 0, unit: "Rolos", status: "Indisponível" }
+    ];
+
+    // Filtro de Estoque
+    const filteredStock = matrizStock.filter(p => p.name.toLowerCase().includes(stockSearch.toLowerCase()));
+
+    // FUNÇÃO DE BUSCA DE CLIENTE (HISTÓRICO 360)
+    const handleSearchClient = () => {
+        if (!searchTerm) return;
+        setSearchResult({
+            name: "João da Silva",
+            doc: "000.123.456-78",
+            score: "A (Excelente)",
+            last_purchase: "20/05/2025 (Ração)",
+            debt: "R$ 15.200 (A vencer)",
+            grain_balance: "5.400 sc Soja",
+            obs: "Cliente fidelizado. Potencial para venda futura."
+        });
+    };
+
+    return (
+        <div className="space-y-6 animate-in fade-in">
+            {/* CABEÇALHO COM SELEÇÃO DE VISÃO */}
+            <div className="flex flex-col gap-4">
+                <div className="flex justify-between items-center">
+                    <div>
+                        <h2 className="text-3xl font-bold text-white flex items-center gap-2"><Activity className="text-blue-400"/> Gestão Regional</h2>
+                        <p className="text-xs text-white/50">Unidade Visualizada: <strong className="text-white">{activeBranch}</strong></p>
+                    </div>
+                    <div className="text-right hidden md:block">
+                        <p className="text-[10px] text-white/40 uppercase">Meta Mensal</p>
+                        <p className="text-2xl font-bold text-green-400">82% Atingida</p>
+                    </div>
+                </div>
+                
+                {/* MENU DE NAVEGAÇÃO ESTRATÉGICA */}
+                <div className="flex gap-2 bg-black/20 p-1 rounded-xl overflow-x-auto no-scrollbar">
+                    {['dashboard', 'estoque_sede', 'clientes'].map(tab => (
+                        <button 
+                            key={tab} 
+                            onClick={() => setActiveTab(tab)} 
+                            className={`flex-1 px-4 py-2 rounded-lg text-xs font-bold uppercase transition whitespace-nowrap ${activeTab === tab ? 'bg-blue-600 text-white shadow-lg' : 'text-white/50 hover:text-white'}`}
+                        >
+                            {tab === 'dashboard' ? 'KPIs Gerais' : tab === 'estoque_sede' ? '🔍 Estoque Sede' : 'Consulta 360°'}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            {/* --- ABA 1: DASHBOARD (KPIS) --- */}
+            {activeTab === 'dashboard' && (
+                <>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <GlassCard className="cursor-pointer hover:bg-white/5 border-l-4 border-green-500" onClick={() => setView('estoque')}>
+                            <div className="flex justify-between items-start">
+                                <div><p className="text-white/60 text-xs font-bold">Estoque Local</p><h3 className="text-2xl font-black text-white">{branchData.stock}</h3></div>
+                                <Wheat className="text-green-400" size={24}/>
+                            </div>
+                            <div className="w-full bg-white/10 h-1.5 rounded-full mt-3"><div className="bg-green-500 h-full w-[75%]"/></div>
+                        </GlassCard>
+
+                        <GlassCard className="cursor-pointer hover:bg-white/5 border-l-4 border-blue-500" onClick={() => setView('financeiro')}>
+                            <div className="flex justify-between items-start">
+                                <div><p className="text-white/60 text-xs font-bold">Vendas (Dia)</p><h3 className="text-2xl font-black text-white">{branchData.sales}</h3></div>
+                                <ShoppingBag className="text-blue-400" size={24}/>
+                            </div>
+                        </GlassCard>
+
+                        <GlassCard className="cursor-pointer hover:bg-white/5 border-l-4 border-yellow-500" onClick={() => setView('logistica')}>
+                            <div className="flex justify-between items-start">
+                                <div><p className="text-white/60 text-xs font-bold">Pátio</p><h3 className="text-2xl font-black text-white">{branchData.trucks} Caminhões</h3></div>
+                                <Truck className="text-yellow-400" size={24}/>
+                            </div>
+                        </GlassCard>
+                    </div>
+
+                    {/* FERRAMENTAS RÁPIDAS */}
+                    <h3 className="font-bold text-white mt-4 mb-2">Ferramentas de Gestão</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <button onClick={() => setView('price_update')} className="p-3 bg-white/5 border border-white/10 rounded-xl flex flex-col items-center gap-2 hover:bg-white/10 transition">
+                            <FileUp className="text-purple-400"/> <span className="text-xs text-white">Tabela Preços</span>
+                        </button>
+                        <button onClick={() => setView('trading')} className="p-3 bg-white/5 border border-white/10 rounded-xl flex flex-col items-center gap-2 hover:bg-white/10 transition">
+                            <Gavel className="text-amber-400"/> <span className="text-xs text-white">Mesa Grãos</span>
+                        </button>
+                        <button onClick={() => setView('relatorios')} className="p-3 bg-white/5 border border-white/10 rounded-xl flex flex-col items-center gap-2 hover:bg-white/10 transition">
+                            <FileBarChart className="text-cyan-400"/> <span className="text-xs text-white">Relatórios</span>
+                        </button>
+                        <button onClick={() => setView('admin_finance')} className="p-3 bg-white/5 border border-white/10 rounded-xl flex flex-col items-center gap-2 hover:bg-white/10 transition">
+                            <PieChart className="text-emerald-400"/> <span className="text-xs text-white">DRE Gerencial</span>
+                        </button>
+                    </div>
+                </>
+            )}
+
+            {/* --- ABA 2: BUSCA RÁPIDA ESTOQUE SEDE (NOVIDADE) --- */}
+            {activeTab === 'estoque_sede' && (
+                <div className="space-y-4">
+                    <div className="bg-blue-900/20 border border-blue-500/30 p-4 rounded-2xl">
+                        <h3 className="font-bold text-white mb-1 flex items-center gap-2"><Package size={18}/> Consulta Matriz (Ibirubá)</h3>
+                        <p className="text-xs text-white/60 mb-3">Verifique a disponibilidade antes de solicitar transferência.</p>
+                        
+                        <div className="relative">
+                            <input 
+                                value={stockSearch}
+                                onChange={(e) => setStockSearch(e.target.value)}
+                                placeholder="Digite o nome do produto..."
+                                className="w-full bg-black/30 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white focus:outline-none focus:border-blue-500 transition text-sm"
+                            />
+                            <Search className="absolute left-3 top-3.5 text-white/40" size={16}/>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-2">
+                        {filteredStock.map(item => (
+                            <GlassCard key={item.id} className="p-3 flex justify-between items-center hover:bg-white/5">
+                                <div>
+                                    <h4 className="font-bold text-white text-sm">{item.name}</h4>
+                                    <p className="text-[10px] text-white/50">Unidade: {item.unit}</p>
+                                </div>
+                                <div className="text-right">
+                                    <p className="font-bold text-white text-lg">{item.qtd.toLocaleString()}</p>
+                                    <span className={`text-[9px] px-2 py-0.5 rounded uppercase font-bold ${item.status === 'Indisponível' ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400'}`}>
+                                        {item.status}
+                                    </span>
+                                </div>
+                            </GlassCard>
+                        ))}
+                        {filteredStock.length === 0 && <p className="text-center text-white/30 text-xs py-4">Nenhum produto encontrado.</p>}
+                    </div>
+                </div>
+            )}
+
+            {/* --- ABA 3: CONSULTA 360 (HISTÓRICO) --- */}
+            {activeTab === 'clientes' && (
+                <div className="space-y-4">
+                    <div className="relative">
+                        <input 
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            placeholder="Buscar Produtor (Nome ou CPF)..."
+                            className="w-full bg-black/30 border border-white/10 rounded-2xl pl-12 pr-4 py-4 text-white focus:outline-none focus:border-blue-500 transition"
+                        />
+                        <Search className="absolute left-4 top-4 text-white/40"/>
+                        <button onClick={handleSearchClient} className="absolute right-2 top-2 bg-blue-600 p-2 rounded-xl text-white hover:bg-blue-500"><ArrowRight size={20}/></button>
+                    </div>
+
+                    {searchResult && (
+                        <GlassCard className="border-t-4 border-green-500 animate-in slide-in-from-bottom-4">
+                            <div className="flex justify-between items-start mb-4">
+                                <div>
+                                    <h3 className="text-2xl font-bold text-white">{searchResult.name}</h3>
+                                    <p className="text-xs text-white/50">CPF: {searchResult.doc}</p>
+                                </div>
+                                <span className="bg-green-500/20 text-green-400 px-3 py-1 rounded-full text-xs font-bold border border-green-500/30">{searchResult.score}</span>
+                            </div>
+                            
+                            <div className="grid grid-cols-2 gap-4 text-sm mb-4">
+                                <div className="bg-white/5 p-3 rounded-xl">
+                                    <p className="text-white/40 text-xs">Saldo Devedor</p>
+                                    <p className="text-red-400 font-bold">{searchResult.debt}</p>
+                                </div>
+                                <div className="bg-white/5 p-3 rounded-xl">
+                                    <p className="text-white/40 text-xs">Saldo Grãos</p>
+                                    <p className="text-yellow-400 font-bold">{searchResult.grain_balance}</p>
+                                </div>
+                            </div>
+                            
+                            <p className="text-xs text-white/60 italic border-t border-white/10 pt-2">Obs: {searchResult.obs}</p>
+                            
+                            <div className="mt-4 grid grid-cols-2 gap-2">
+                                <button className="py-2 bg-white/10 rounded-lg text-xs text-white hover:bg-white/20">Ver Extrato</button>
+                                <button className="py-2 bg-white/10 rounded-lg text-xs text-white hover:bg-white/20">Histórico Notas</button>
+                            </div>
+                        </GlassCard>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+};
 const OperatorHome = ({ setView }) => (<div className="grid grid-cols-1 gap-6 animate-in fade-in"><GlassCard className="col-span-full border-l-4 border-green-500 text-center py-12 cursor-pointer hover:bg-white/5" onClick={()=>setView('estoque')}><Camera size={48} className="mx-auto mb-4 text-green-400"/><h3 className="text-2xl font-bold text-white">Escanear Entrada</h3></GlassCard></div>);
 const EstoquistaDashboard = ({ setView }) => (<div className="grid grid-cols-1 gap-6 animate-in fade-in"><GlassCard className="col-span-full border-l-4 border-green-500 text-center py-12 cursor-pointer hover:bg-white/5" onClick={()=>setView('estoque')}><Camera size={48} className="mx-auto mb-4 text-green-400"/><h3 className="text-2xl font-bold text-white">Escanear Entrada</h3></GlassCard></div>);
 const SmartHome = ({ role, setView, branchData, activeBranch }) => {
@@ -1676,6 +2148,7 @@ const Dashboard = ({ user, role, currentTenant, onChangeTenant, onLogout, market
         { id: 'receituario', icon: FileSignature, label: 'Receituário', roles: ['Eng. Agrônomo'] },
         { id: 'chat', icon: MessageCircle, label: 'Chat', roles: ['Produtor', 'Admin', 'Eng. Agrônomo', 'Téc. Nutrição', 'Téc. Segurança', 'Supervisor Armazém'] },
         { id: 'pool', icon: Users, label: 'Pool', roles: ['Produtor'] },
+        { id: 'telemetry', icon: MapPin, label: 'Telemetria', roles: ['Produtor', 'Coord. Regional'] },
         { id: 'team_chat', icon: MessageSquare, label: 'Team', roles: ['Admin', 'Operador', 'Estoquista', 'Coord. Regional', 'Coord. Unidade'] },
         { id: 'safety', icon: HardHat, label: 'Segurança', roles: ['Téc. Segurança', 'Supervisor Armazém', 'Coord. Unidade'] },
         { id: 'crm', icon: Users2, label: 'Produtores', roles: ['Coord. Regional', 'Coord. Unidade'] },
@@ -1738,6 +2211,7 @@ const Dashboard = ({ user, role, currentTenant, onChangeTenant, onLogout, market
                             {view === 'cobranca' && <CobreancaView />}
                             {view === 'grains' && <GrainWalletView />}
                             {view === 'comunidade' && <CommunityView userEmail={user.email} />}
+                            {view === 'telemetry' && <TelemetryView />}
                             {view === 'chat' && <ChatModule title="Suporte Técnico" subtitle="Online agora" userEmail={user.email} role={role} chatContext={chatContext} setChatContext={setChatContext}/>}
                             {view === 'team_chat' && <ChatModule title="Chat Interno" subtitle="Equipe" />}
                             {view === 'receituario' && <ReceituarioView />}
