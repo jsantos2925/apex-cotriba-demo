@@ -5,7 +5,7 @@ import { getFirestore, collection, onSnapshot, query, orderBy, limit, addDoc, se
 import { 
     Home, Package, MessageCircle, Wallet, User, LogOut, Loader, Camera, Send, 
     AlertTriangle, MapPin, Search, ShieldCheck, ShoppingCart, FileText, Truck, Cloud,
-    CreditCard, Wind, Droplets, CheckCircle, Tractor, Sprout, Clock, Trash2, Menu, 
+    CreditCard, Wind, Droplets, CheckCircle, Tractor, Sprout, Clock, Trash2, Menu, Play, Pause, Paperclip, 
     BarChart3, Activity, ShoppingBag, Megaphone, ArrowRightLeft, Filter, Mic, Video, Image as ImageIcon,
     Lock, Mail, FileSignature, QrCode, Gavel, Scale, ScanEye, Users, Siren, PieChart, LineChart,
     Hash, Download, BoxSelect, Wrench, Split, Landmark, FileUp, RefreshCw, Check, Newspaper, 
@@ -19,26 +19,31 @@ import { twMerge } from 'tailwind-merge';
 // 1. CONFIGURAÇÃO E DADOS
 // ============================================================================
 
-const apiKey = "AIzaSyDuPdpI_ej6aXMeIBFGErf_iWFzB8u0jco"; // <--- SUA CHAVE GEMINI AQUI
+// ============================================================================
+// 1. CONFIGURAÇÃO (COLE SUAS CHAVES DO NOVO PROJETO AQUI)
+// ============================================================================
 
-const defaultFirebaseConfig = {
-    apiKey: "AIzaSyD_o-5ZhbfQHmgCb21RKU3c9XXCOLhFR8s",
-  authDomain: "agrimind-os.firebaseapp.com",
-  projectId: "agrimind-os",
-  storageBucket: "agrimind-os.firebasestorage.app",
-  messagingSenderId: "466795111574",
-  appId: "1:466795111574:web:3ca0be4acdcbcf56a50eb7"
+const apiKey = "AIzaSyDuPdpI_ej6aXMeIBFGErf_iWFzB8u0jco"; // <--- SUA CHAVE GEMINI (IA)
+
+const firebaseConfig = {
+    apiKey: "AIzaSyCLZdof7ckXqiwK5Mn6i8-G73eCUTx-WNA",
+  authDomain: "vitalis-demo-v2.firebaseapp.com",
+  projectId: "vitalis-demo-v2",
+  storageBucket: "vitalis-demo-v2.firebasestorage.app",
+  messagingSenderId: "893780689786",
+  appId: "1:893780689786:web:b68d1bef7c33a153b94cc3"
 };
 
-// Inicialização Segura
+// Inicialização Real do Banco de Dados
 let app, db, auth;
-const firebaseConfigToUse = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : defaultFirebaseConfig;
-
 try {
-    if (firebaseConfigToUse.apiKey && !firebaseConfigToUse.apiKey.includes("SUA_API_KEY")) {
-        app = initializeApp(firebaseConfigToUse);
+    // Só inicia se você tiver colado a chave acima
+    if (firebaseConfig.apiKey && !firebaseConfig.apiKey.includes("AIzaSy...")) {
+        app = initializeApp(firebaseConfig);
         db = getFirestore(app);
         auth = getAuth(app);
+    } else {
+        console.warn("⚠️ AVISO: Chaves do Firebase não configuradas. O chat não funcionará.");
     }
 } catch (error) { console.error("Erro Firebase:", error); }
 
@@ -363,79 +368,138 @@ const FinanceiroCompleto = ({ role }) => (
 
 // --- MÓDULOS FUNCIONAIS GERAIS ---
 
-// --- MÓDULO DE CHAT UNIVERSAL (SUPORTE + COMUNIDADE + MÍDIA) ---
+// --- MÓDULO DE CHAT REAL (MULTIMÍDIA + PRESENÇA ONLINE) ---
 const ChatModule = ({ title, subtitle, userEmail, role, chatContext, setChatContext }) => {
     const isCommunity = title.includes("Comunidade"); 
     const [activeSlot, setActiveSlot] = useState(null); 
-    const [viewTab, setViewTab] = useState('groups'); // 'groups' ou 'online' (Apenas comunidade)
+    const [viewTab, setViewTab] = useState('chats'); // 'chats' ou 'online'
     const [messages, setMessages] = useState([]);
     const [input, setInput] = useState("");
     const [showCreateGroup, setShowCreateGroup] = useState(false);
     const [newGroupName, setNewGroupName] = useState('');
     const endRef = useRef(null);
 
-    // 1. CANAIS DE SUPORTE (EMPRESA)
+    // CANAIS CORPORATIVOS (Acesso da Equipe/Suporte)
     const supportChannels = [
-        { id: 'comercial', name: 'Comercial', icon: <ShoppingBag className="text-blue-400" size={24}/>, desc: 'Vendas e Fin.' },
-        { id: 'agronomo', name: 'Agronomia', icon: <Wheat className="text-green-400" size={24}/>, desc: 'Técnico' },
-        { id: 'nutricao', name: 'Nutrição', icon: <Milk className="text-pink-400" size={24}/>, desc: 'Rações' },
-        { id: 'seguranca', name: 'Segurança', icon: <ShieldCheck className="text-red-400" size={24}/>, desc: 'Normas' }
+        { id: 'chat_comercial', name: 'Comercial', icon: <ShoppingBag className="text-blue-400" size={24}/>, desc: 'Vendas', type: 'dept' },
+        { id: 'chat_agronomia', name: 'Agronomia', icon: <Wheat className="text-green-400" size={24}/>, desc: 'Técnico', type: 'dept' },
+        { id: 'chat_nutricao', name: 'Nutrição', icon: <Milk className="text-pink-400" size={24}/>, desc: 'Rações', type: 'dept' },
+        { id: 'chat_seguranca', name: 'Segurança', icon: <ShieldCheck className="text-red-400" size={24}/>, desc: 'Normas', type: 'dept' }
     ];
 
-    // 2. DADOS DA COMUNIDADE (GRUPOS E PRODUTORES)
+    // GRUPOS DA COMUNIDADE
     const [communityGroups, setCommunityGroups] = useState([
-        { id: 'gp_geral', name: "Comunidade Geral", icon: <Users size={24}/>, desc: "120 membros", type: 'group' },
-        { id: 'gp_vizinhos', name: "Vizinhos São Chico", icon: <MapPin size={24}/>, desc: "12 membros", type: 'group' }
+        { id: 'gp_geral', name: "Comunidade Geral", desc: "120 membros", icon: <Users size={24}/>, type: 'group' },
+        { id: 'gp_vizinhos', name: "Vizinhos Unidade", desc: "Local", icon: <MapPin size={24}/>, type: 'group' }
     ]);
-    
-    // Filtra produtores online (Simulação)
-    const onlineProducers = MOCK_USERS.filter(u => u.status === 'online' && u.name !== 'João da Silva'); // Remove o próprio usuário da lista
 
-    // LÓGICA DE ENTRADA (ROTA AUTOMÁTICA)
+    // LISTA DE PESSOAS ONLINE (MOCKUP INTELIGENTE)
+    // Se sou Produtor -> Vejo outros Produtores.
+    // Se sou Equipe -> Vejo Produtores para atender.
+    const onlinePeople = MOCK_USERS.filter(u => u.name !== (userEmail ? userEmail.split('@')[0] : ''));
+
+    // --- 1. CONEXÃO REAL-TIME ---
+    useEffect(() => {
+        if (!activeSlot || !db) return;
+        
+        // Define a coleção baseada se é um Grupo ou um Chat Direto (Pessoa)
+        const collectionId = activeSlot.type === 'user' ? `dm_${activeSlot.id}` : activeSlot.id;
+
+        const q = query(
+            collection(db, 'vitalis_chats', collectionId, 'messages'), 
+            orderBy('createdAt', 'asc'), 
+            limit(100)
+        );
+
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const msgs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setMessages(msgs);
+        });
+
+        return () => unsubscribe();
+    }, [activeSlot]);
+
+    // --- 2. ENVIAR TEXTO ---
+    const handleSend = async (e) => { 
+        e.preventDefault(); 
+        if(!input.trim()) return; 
+        sendMessage(input, 'text');
+    };
+
+    // --- 3. ENVIAR MÍDIA (SIMULAÇÃO DE UPLOAD PARA DEMO) ---
+    const sendMedia = (mediaType) => {
+        const content = mediaType === 'audio' ? "Áudio (0:14)" : mediaType === 'video' ? "Vídeo da Lavoura.mp4" : "Foto.jpg";
+        sendMessage(content, mediaType);
+    };
+
+    const sendMessage = async (content, type) => {
+        const collectionId = activeSlot.type === 'user' ? `dm_${activeSlot.id}` : activeSlot.id;
+        
+        const msgData = {
+            text: content,
+            sender: userEmail ? userEmail.split('@')[0] : "Anônimo",
+            role: role || "Usuário",
+            createdAt: serverTimestamp(),
+            type: type
+        };
+
+        if (db) {
+            await addDoc(collection(db, 'vitalis_chats', collectionId, 'messages'), msgData);
+            setInput(""); 
+        } else {
+            // Fallback Offline
+            setMessages([...messages, { ...msgData, id: Date.now(), createdAt: { seconds: Date.now()/1000 } }]);
+        }
+    };
+
+    // ROTEAMENTO AGRILENS
     useEffect(() => {
         if (chatContext && !activeSlot && setChatContext) {
-            const target = supportChannels.find(d => d.id === chatContext.id);
-            if (target) {
-                setActiveSlot(target);
-                setMessages([{ id: 1, text: chatContext.msg, sender: "Eu", time: "Agora" }]);
-                setChatContext(null);
-            }
+            const target = supportChannels.find(d => d.id === `chat_${chatContext.id}`) || supportChannels[1];
+            if (target) { setActiveSlot(target); setChatContext(null); }
         }
     }, [chatContext]);
 
-    // FUNÇÕES DE AÇÃO
-    const handleSelect = (item) => {
-        setActiveSlot(item);
-        const msg = isCommunity && item.type === 'user' 
-            ? `Iniciando conversa privada com ${item.name}...` 
-            : isCommunity 
-                ? `Você entrou no grupo ${item.name}.`
-                : `Bem-vindo ao atendimento ${item.name}.`;
-        setMessages([{ id: 1, text: msg, sender: "System", time: "Agora" }]);
-    };
-
-    const handleSend = (e) => { 
-        e.preventDefault(); 
-        if(!input.trim()) return; 
-        setMessages([...messages, { id: Date.now(), text: input, sender: "Eu", time: "Agora" }]); 
-        setInput(""); 
-    };
-
-    const sendMedia = (type) => {
-        const labels = { audio: "🎤 Áudio (0:12)", video: "🎥 Vídeo (0:45)", image: "📷 Foto" };
-        setMessages([...messages, { id: Date.now(), text: labels[type], sender: "Eu", time: "Agora", isMedia: true, type }]);
-    };
-
     const createGroup = () => {
         if(!newGroupName) return;
-        setCommunityGroups([...communityGroups, { id: Date.now(), name: newGroupName, icon: <Users size={24}/>, desc: "Novo Grupo", type: 'group' }]);
+        const newGroup = { id: `gp_${Date.now()}`, name: newGroupName, icon: <Users size={24}/>, desc: "Criado agora", type: 'group' };
+        setCommunityGroups([...communityGroups, newGroup]);
         setShowCreateGroup(false);
-        setNewGroupName('');
     };
 
     useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
 
-    // TELA 1: LOBBY (SELEÇÃO)
+    // RENDERIZAÇÃO DA MENSAGEM (BOLHAS DE MÍDIA)
+    const renderMessageBubble = (m) => {
+        const isMe = m.sender === (userEmail ? userEmail.split('@')[0] : 'Anônimo');
+        
+        // Bolha de Áudio
+        if (m.type === 'audio') return (
+            <div className={`flex items-center gap-3 p-3 rounded-2xl min-w-[150px] ${isMe ? 'bg-green-600 text-white' : 'bg-white/10 text-white'}`}>
+                <button className="p-2 bg-black/20 rounded-full hover:bg-black/40"><Play size={16} fill="white"/></button>
+                <div className="flex flex-col"><div className="h-1 w-24 bg-white/30 rounded-full mb-1"/><span className="text-[10px] opacity-70">0:14</span></div>
+            </div>
+        );
+
+        // Bolha de Imagem/Vídeo
+        if (m.type === 'image' || m.type === 'video') return (
+            <div className={`p-2 rounded-2xl ${isMe ? 'bg-green-600' : 'bg-white/10'}`}>
+                <div className="w-48 h-32 bg-black/30 rounded-lg flex items-center justify-center border border-white/10 mb-1">
+                    {m.type === 'image' ? <ImageIcon size={32} className="text-white/50"/> : <Video size={32} className="text-white/50"/>}
+                </div>
+                <p className="text-xs text-white px-1">{m.text}</p>
+            </div>
+        );
+
+        // Bolha de Texto Padrão
+        return (
+            <div className={`p-3 rounded-2xl text-sm ${isMe ? 'bg-green-600 text-white rounded-tr-none' : 'bg-white/10 text-white rounded-tl-none border border-white/5'}`}>
+                <p>{m.text}</p>
+            </div>
+        );
+    };
+
+    // TELA 1: LOBBY (LISTAS)
     if (!activeSlot) return (
         <div className="space-y-6 animate-in fade-in">
             <div className="flex justify-between items-center">
@@ -443,71 +507,58 @@ const ChatModule = ({ title, subtitle, userEmail, role, chatContext, setChatCont
                     <MessageCircle className={isCommunity ? "text-yellow-400" : "text-green-400"}/> 
                     {isCommunity ? "Comunidade" : "Atendimento"}
                 </h2>
-                {/* Abas da Comunidade */}
-                {isCommunity && (
-                    <div className="flex bg-white/10 rounded-lg p-1">
-                        <button onClick={()=>setViewTab('groups')} className={`px-3 py-1 rounded text-xs ${viewTab==='groups'?'bg-white/20 text-white':'text-white/40'}`}>Grupos</button>
-                        <button onClick={()=>setViewTab('online')} className={`px-3 py-1 rounded text-xs ${viewTab==='online'?'bg-white/20 text-white':'text-white/40'}`}>Online</button>
-                    </div>
-                )}
+                
+                {/* ABAS DE NAVEGAÇÃO (GRUPOS vs ONLINE) */}
+                <div className="flex bg-white/10 rounded-lg p-1">
+                    <button onClick={()=>setViewTab('chats')} className={`px-3 py-1 rounded text-xs transition ${viewTab==='chats'?'bg-white/20 text-white':'text-white/40'}`}>Conversas</button>
+                    <button onClick={()=>setViewTab('online')} className={`px-3 py-1 rounded text-xs transition ${viewTab==='online'?'bg-white/20 text-white':'text-white/40'}`}>Online</button>
+                </div>
             </div>
 
-            {/* Conteúdo: Suporte */}
-            {!isCommunity && (
-                <div className="grid gap-3">
-                    <p className="text-white/50 text-sm">Escolha um departamento:</p>
-                    {supportChannels.map(dept => (
-                        <GlassCard key={dept.id} onClick={() => handleSelect(dept)} className="p-4 cursor-pointer hover:bg-white/10 flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center text-white">{dept.icon}</div>
-                            <div><h4 className="font-bold text-white">{dept.name}</h4><p className="text-xs text-white/50">{dept.desc}</p></div>
-                            <ArrowRightLeft size={16} className="ml-auto text-white/30"/>
-                        </GlassCard>
-                    ))}
-                </div>
-            )}
-
-            {/* Conteúdo: Comunidade (Grupos) */}
-            {isCommunity && viewTab === 'groups' && (
+            {/* LISTA DE CONVERSAS (GRUPOS E DEPARTAMENTOS) */}
+            {viewTab === 'chats' && (
                 <>
-                    <NeonButton onClick={() => setShowCreateGroup(!showCreateGroup)} className="w-full mb-4 h-10 text-xs" variant="secondary"><PlusCircle size={14}/> Criar Novo Grupo</NeonButton>
-                    {showCreateGroup && (
-                        <GlassCard className="mb-4 bg-yellow-900/20 border-yellow-500/30 p-3 flex gap-2">
-                            <GlassInput placeholder="Nome do Grupo..." value={newGroupName} onChange={e=>setNewGroupName(e.target.value)}/>
-                            <NeonButton onClick={createGroup}>Criar</NeonButton>
-                        </GlassCard>
-                    )}
-                    <div className="grid gap-3">
-                        {communityGroups.map(g => (
-                            <GlassCard key={g.id} onClick={() => handleSelect(g)} className="p-4 cursor-pointer hover:bg-white/10 flex items-center gap-4">
-                                <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center text-white">{g.icon}</div>
-                                <div><h4 className="font-bold text-white">{g.name}</h4><p className="text-xs text-white/50">{g.desc}</p></div>
+                    {isCommunity && <NeonButton onClick={() => setShowCreateGroup(!showCreateGroup)} className="w-full mb-4 h-10 text-xs" variant="secondary"><PlusCircle size={14}/> Novo Grupo</NeonButton>}
+                    {showCreateGroup && (<GlassCard className="mb-4 bg-yellow-900/20 p-3 flex gap-2"><GlassInput placeholder="Nome..." value={newGroupName} onChange={e=>setNewGroupName(e.target.value)}/><NeonButton onClick={createGroup}>Criar</NeonButton></GlassCard>)}
+                    
+                    <div className="grid grid-cols-1 gap-3">
+                        {(isCommunity ? communityGroups : supportChannels).map(item => (
+                            <GlassCard key={item.id} onClick={() => setActiveSlot(item)} className="p-4 cursor-pointer hover:bg-white/10 flex items-center gap-4 transition-all">
+                                <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center text-white">{item.icon}</div>
+                                <div><h4 className="font-bold text-white">{item.name}</h4><p className="text-xs text-white/50">{item.desc}</p></div>
+                                <ArrowRightLeft size={16} className="ml-auto text-white/30"/>
                             </GlassCard>
                         ))}
                     </div>
                 </>
             )}
 
-            {/* Conteúdo: Comunidade (Online - WhatsApp Style) */}
-            {isCommunity && viewTab === 'online' && (
-                <div className="grid gap-3">
-                    {onlineProducers.map(u => (
-                        <GlassCard key={u.id} onClick={() => handleSelect({...u, type: 'user'})} className="p-4 cursor-pointer hover:bg-white/10 flex items-center gap-4">
+            {/* LISTA DE PESSOAS ONLINE (WHASTAPP STYLE) */}
+            {viewTab === 'online' && (
+                <div className="grid grid-cols-1 gap-3">
+                    <p className="text-xs text-white/40 uppercase mb-1">Disponíveis agora</p>
+                    {onlinePeople.map(u => (
+                        <GlassCard key={u.id} onClick={() => setActiveSlot({...u, type: 'user'})} className="p-3 cursor-pointer hover:bg-white/10 flex items-center gap-3 border-l-4 border-green-500">
                             <div className="relative">
-                                <div className="w-12 h-12 rounded-full bg-indigo-600 flex items-center justify-center text-white font-bold">{u.name[0]}</div>
+                                <div className="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center text-white font-bold">{u.name[0]}</div>
                                 <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-black"></div>
                             </div>
-                            <div><h4 className="font-bold text-white">{u.name}</h4><p className="text-xs text-green-400">Online agora</p></div>
+                            <div className="flex-1">
+                                <h4 className="font-bold text-white text-sm">{u.name}</h4>
+                                <p className="text-xs text-green-400">{u.farm}</p>
+                            </div>
+                            <MessageCircle size={20} className="text-white/30"/>
                         </GlassCard>
                     ))}
-                    {onlineProducers.length === 0 && <p className="text-white/30 text-center">Nenhum outro produtor online.</p>}
                 </div>
             )}
         </div>
     );
 
-    // TELA 2: SALA DE CHAT (COM MÍDIA)
+    // TELA 2: SALA DE CHAT
     return (
         <div className="h-[600px] flex flex-col bg-black/40 backdrop-blur-xl rounded-3xl border border-white/10 overflow-hidden animate-in fade-in">
+            {/* Header */}
             <div className="p-4 border-b border-white/10 bg-white/5 flex justify-between items-center">
                 <div className="flex items-center gap-3">
                     <button onClick={() => setActiveSlot(null)} className="p-2 hover:bg-white/10 rounded-full text-white"><ArrowRightLeft className="rotate-180" size={20}/></button>
@@ -518,34 +569,38 @@ const ChatModule = ({ title, subtitle, userEmail, role, chatContext, setChatCont
                 </div>
             </div>
             
+            {/* Mensagens */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
-                {messages.map((m, i) => (
-                    <div key={i} className={`flex ${m.sender === 'Eu' ? 'justify-end' : 'justify-start'}`}>
-                        <div className={`max-w-[80%] p-3 rounded-2xl text-sm shadow-md ${m.sender === 'Eu' ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-white/10 text-white rounded-tl-none border border-white/5'}`}>
-                            <p className="text-[10px] opacity-50 mb-1 font-bold">{m.sender}</p>
-                            <div className="flex items-center gap-2">
-                                {m.isMedia && (m.type === 'audio' ? <Mic size={16}/> : m.type === 'video' ? <Video size={16}/> : <ImageIcon size={16}/>)}
-                                <span>{m.text}</span>
+                {messages.length === 0 && <div className="text-center text-white/20 py-10">Inicie a conversa...</div>}
+                
+                {messages.map((m) => {
+                    const isMe = m.sender === (userEmail ? userEmail.split('@')[0] : 'Eu');
+                    return (
+                        <div key={m.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+                            <div className="flex flex-col gap-1 max-w-[80%]">
+                                <span className={`text-[9px] ${isMe ? 'text-right' : 'text-left'} text-white/40 ml-1`}>{!isMe && m.sender}</span>
+                                {renderMessageBubble(m)}
                             </div>
-                            <p className="text-[9px] text-right opacity-30 mt-1">{m.time}</p>
                         </div>
-                    </div>
-                ))}
+                    );
+                })}
                 <div ref={endRef}/>
             </div>
             
-            {/* INPUT COM MÍDIA */}
-            <form onSubmit={handleSend} className="p-4 bg-white/5 border-t border-white/10 flex gap-2 items-center">
-                <button type="button" onClick={()=>sendMedia('audio')} className="p-2 text-white/50 hover:text-green-400 transition"><Mic size={20}/></button>
-                <button type="button" onClick={()=>sendMedia('video')} className="p-2 text-white/50 hover:text-blue-400 transition"><Video size={20}/></button>
-                <button type="button" onClick={()=>sendMedia('image')} className="p-2 text-white/50 hover:text-purple-400 transition"><Camera size={20}/></button>
-                <input value={input} onChange={e=>setInput(e.target.value)} className="flex-1 bg-black/30 border border-white/10 rounded-xl px-4 text-white focus:outline-none" placeholder="Mensagem..."/>
-                <NeonButton type="submit" className="px-3 rounded-xl" variant="accent"><Send size={18}/></NeonButton>
+            {/* Input Multimídia */}
+            <form onSubmit={handleSend} className="p-3 bg-white/5 border-t border-white/10 flex gap-2 items-center">
+                <button type="button" onClick={()=>sendMedia('audio')} className="p-2 text-white/50 hover:text-green-400 transition bg-white/5 rounded-full"><Mic size={20}/></button>
+                <button type="button" onClick={()=>sendMedia('image')} className="p-2 text-white/50 hover:text-blue-400 transition bg-white/5 rounded-full"><Camera size={20}/></button>
+                <button type="button" onClick={()=>sendMedia('video')} className="p-2 text-white/50 hover:text-purple-400 transition bg-white/5 rounded-full"><Video size={20}/></button>
+                
+                <div className="flex-1 relative">
+                    <input value={input} onChange={e=>setInput(e.target.value)} className="w-full bg-black/30 border border-white/10 rounded-full px-4 py-2 text-white focus:outline-none focus:border-green-500/50 text-sm" placeholder="Mensagem..."/>
+                </div>
+                <button type="submit" className="p-2 bg-green-600 rounded-full text-white shadow-lg hover:scale-105 transition"><Send size={18}/></button>
             </form>
         </div>
     );
 };
-
 // 3. MÓDULO DE SEGURANÇA DO TRABALHO (EHS - COMPLETO COM ESTOQUE)
 const SafetyView = ({ setView, role, activeBranch }) => {
     const [activeTab, setActiveTab] = useState('dashboard'); 
