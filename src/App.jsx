@@ -6,7 +6,7 @@ import {
     Home, Package, MessageCircle, Wallet, User, LogOut, Loader, Camera, Send, 
     AlertTriangle, MapPin, Search, ShieldCheck, ShoppingCart, FileText, Truck, Cloud,
     CreditCard, Wind, Droplets, CheckCircle, Tractor, Sprout, Clock, Trash2, Menu, 
-    BarChart3, Activity, ShoppingBag, Megaphone, ArrowRightLeft, Filter,
+    BarChart3, Activity, ShoppingBag, Megaphone, ArrowRightLeft, Filter, Mic, Video, Image as ImageIcon,
     Lock, Mail, FileSignature, QrCode, Gavel, Scale, ScanEye, Users, Siren, PieChart, LineChart,
     Hash, Download, BoxSelect, Wrench, Split, Landmark, FileUp, RefreshCw, Check, Newspaper, 
     Bell, Database, Layers, Coffee, Wheat, ChevronDown, Smartphone, UserCheck, PlusCircle,Gauge, Signal, Fuel, Map, 
@@ -19,7 +19,7 @@ import { twMerge } from 'tailwind-merge';
 // 1. CONFIGURAÇÃO E DADOS
 // ============================================================================
 
-const apiKey = "AIzaSyDfBWOJ_Qbfn_tfmR2E_AO9jn73d95uvF4"; // <--- SUA CHAVE GEMINI AQUI
+const apiKey = "AIzaSyDuPdpI_ej6aXMeIBFGErf_iWFzB8u0jco"; // <--- SUA CHAVE GEMINI AQUI
 
 const defaultFirebaseConfig = {
     apiKey: "AIzaSyD_o-5ZhbfQHmgCb21RKU3c9XXCOLhFR8s",
@@ -363,61 +363,79 @@ const FinanceiroCompleto = ({ role }) => (
 
 // --- MÓDULOS FUNCIONAIS GERAIS ---
 
-// --- MÓDULO DE CHAT INTELIGENTE (HÍBRIDO) ---
-const ChatModule = ({ title, subtitle, userEmail }) => {
-    const isCommunity = title.includes("Comunidade"); // Detecta se é Comunidade ou Suporte
-    const [activeSlot, setActiveSlot] = useState(null); // Pode ser um Grupo ou um Departamento
+// --- MÓDULO DE CHAT UNIVERSAL (SUPORTE + COMUNIDADE + MÍDIA) ---
+const ChatModule = ({ title, subtitle, userEmail, role, chatContext, setChatContext }) => {
+    const isCommunity = title.includes("Comunidade"); 
+    const [activeSlot, setActiveSlot] = useState(null); 
+    const [viewTab, setViewTab] = useState('groups'); // 'groups' ou 'online' (Apenas comunidade)
     const [messages, setMessages] = useState([]);
     const [input, setInput] = useState("");
     const [showCreateGroup, setShowCreateGroup] = useState(false);
     const [newGroupName, setNewGroupName] = useState('');
     const endRef = useRef(null);
 
-    // DADOS DO SUPORTE (Produtor -> Empresa)
-    const departments = [
-        { id: 'comercial', name: 'Comercial', icon: <ShoppingBag className="text-blue-400" size={24}/>, desc: 'Vendas, Cotações e Financeiro' },
-        { id: 'agronomo', name: 'Agronomia', icon: <Wheat className="text-green-400" size={24}/>, desc: 'Técnico, Pragas e Receituário' },
-        { id: 'nutricao', name: 'Nutrição Animal', icon: <Milk className="text-pink-400" size={24}/>, desc: 'Rações, Gado e Leite' },
-        { id: 'seguranca', name: 'Segurança', icon: <ShieldCheck className="text-red-400" size={24}/>, desc: 'EPIs e Normas' }
+    // 1. CANAIS DE SUPORTE (EMPRESA)
+    const supportChannels = [
+        { id: 'comercial', name: 'Comercial', icon: <ShoppingBag className="text-blue-400" size={24}/>, desc: 'Vendas e Fin.' },
+        { id: 'agronomo', name: 'Agronomia', icon: <Wheat className="text-green-400" size={24}/>, desc: 'Técnico' },
+        { id: 'nutricao', name: 'Nutrição', icon: <Milk className="text-pink-400" size={24}/>, desc: 'Rações' },
+        { id: 'seguranca', name: 'Segurança', icon: <ShieldCheck className="text-red-400" size={24}/>, desc: 'Normas' }
     ];
 
-    // DADOS DA COMUNIDADE (Produtor -> Produtor)
-    const [groups, setGroups] = useState([
-        { id: 'geral', name: "Comunidade Geral", desc: "120 membros", icon: <Users size={24}/> },
-        { id: 'vizinhos', name: "Vizinhos São Chico", desc: "12 membros", icon: <MapPin size={24}/> }
+    // 2. DADOS DA COMUNIDADE (GRUPOS E PRODUTORES)
+    const [communityGroups, setCommunityGroups] = useState([
+        { id: 'gp_geral', name: "Comunidade Geral", icon: <Users size={24}/>, desc: "120 membros", type: 'group' },
+        { id: 'gp_vizinhos', name: "Vizinhos São Chico", icon: <MapPin size={24}/>, desc: "12 membros", type: 'group' }
     ]);
+    
+    // Filtra produtores online (Simulação)
+    const onlineProducers = MOCK_USERS.filter(u => u.status === 'online' && u.name !== 'João da Silva'); // Remove o próprio usuário da lista
 
-    // Selecionar Canal
+    // LÓGICA DE ENTRADA (ROTA AUTOMÁTICA)
+    useEffect(() => {
+        if (chatContext && !activeSlot && setChatContext) {
+            const target = supportChannels.find(d => d.id === chatContext.id);
+            if (target) {
+                setActiveSlot(target);
+                setMessages([{ id: 1, text: chatContext.msg, sender: "Eu", time: "Agora" }]);
+                setChatContext(null);
+            }
+        }
+    }, [chatContext]);
+
+    // FUNÇÕES DE AÇÃO
     const handleSelect = (item) => {
         setActiveSlot(item);
-        // Mensagem inicial personalizada dependendo do tipo
-        const welcomeMsg = isCommunity 
-            ? `Você entrou no grupo ${item.name}.`
-            : `Olá! Sou do setor de ${item.name}. Como posso ajudar sua propriedade hoje?`;
-            
-        setMessages([{ id: 1, text: welcomeMsg, sender: "System", time: "Agora" }]);
+        const msg = isCommunity && item.type === 'user' 
+            ? `Iniciando conversa privada com ${item.name}...` 
+            : isCommunity 
+                ? `Você entrou no grupo ${item.name}.`
+                : `Bem-vindo ao atendimento ${item.name}.`;
+        setMessages([{ id: 1, text: msg, sender: "System", time: "Agora" }]);
     };
 
-    // Enviar Mensagem
-    const handleSend = (e) => {
-        e.preventDefault();
-        if(!input.trim()) return;
-        setMessages([...messages, { id: Date.now(), text: input, sender: "Eu", time: "Agora" }]);
-        setInput("");
+    const handleSend = (e) => { 
+        e.preventDefault(); 
+        if(!input.trim()) return; 
+        setMessages([...messages, { id: Date.now(), text: input, sender: "Eu", time: "Agora" }]); 
+        setInput(""); 
     };
 
-    // Criar Grupo (Apenas na Comunidade)
+    const sendMedia = (type) => {
+        const labels = { audio: "🎤 Áudio (0:12)", video: "🎥 Vídeo (0:45)", image: "📷 Foto" };
+        setMessages([...messages, { id: Date.now(), text: labels[type], sender: "Eu", time: "Agora", isMedia: true, type }]);
+    };
+
     const createGroup = () => {
         if(!newGroupName) return;
-        setGroups([...groups, { id: Date.now(), name: newGroupName, desc: "1 membro", icon: <Users size={24}/> }]);
+        setCommunityGroups([...communityGroups, { id: Date.now(), name: newGroupName, icon: <Users size={24}/>, desc: "Novo Grupo", type: 'group' }]);
         setShowCreateGroup(false);
-        setNewGroupName("");
+        setNewGroupName('');
     };
 
-    // Rolagem automática
     useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
 
-    // 1. TELA DE SELEÇÃO (LOBBY)
+    // TELA 1: LOBBY (SELEÇÃO)
     if (!activeSlot) return (
         <div className="space-y-6 animate-in fade-in">
             <div className="flex justify-between items-center">
@@ -425,59 +443,76 @@ const ChatModule = ({ title, subtitle, userEmail }) => {
                     <MessageCircle className={isCommunity ? "text-yellow-400" : "text-green-400"}/> 
                     {isCommunity ? "Comunidade" : "Atendimento"}
                 </h2>
+                {/* Abas da Comunidade */}
                 {isCommunity && (
-                    <NeonButton onClick={() => setShowCreateGroup(!showCreateGroup)} className="h-8 text-xs px-3" variant="secondary">
-                        <PlusCircle size={14}/> Novo Grupo
-                    </NeonButton>
+                    <div className="flex bg-white/10 rounded-lg p-1">
+                        <button onClick={()=>setViewTab('groups')} className={`px-3 py-1 rounded text-xs ${viewTab==='groups'?'bg-white/20 text-white':'text-white/40'}`}>Grupos</button>
+                        <button onClick={()=>setViewTab('online')} className={`px-3 py-1 rounded text-xs ${viewTab==='online'?'bg-white/20 text-white':'text-white/40'}`}>Online</button>
+                    </div>
                 )}
             </div>
 
-            {/* Formulário de Novo Grupo (Só aparece na Comunidade) */}
-            {showCreateGroup && isCommunity && (
-                <GlassCard className="mb-4 bg-yellow-900/20 border-yellow-500/30 p-3">
-                    <div className="flex gap-2">
-                        <GlassInput placeholder="Nome do Grupo..." value={newGroupName} onChange={e=>setNewGroupName(e.target.value)}/>
-                        <NeonButton onClick={createGroup} className="h-12">Criar</NeonButton>
-                    </div>
-                </GlassCard>
-            )}
-            
-            <p className="text-white/50 text-sm mb-2">
-                {isCommunity ? "Converse com outros produtores:" : "Escolha um departamento para falar:"}
-            </p>
-
-            <div className="grid grid-cols-1 gap-3">
-                {isCommunity ? (
-                    // LISTA DE GRUPOS (COMUNIDADE)
-                    groups.map(g => (
-                        <GlassCard key={g.id} onClick={() => handleSelect(g)} className="p-4 cursor-pointer hover:bg-white/10 flex items-center gap-4 transition-all">
-                            <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center text-white">{g.icon}</div>
-                            <div><h4 className="font-bold text-white">{g.name}</h4><p className="text-xs text-white/50">{g.desc}</p></div>
-                            <ArrowRightLeft size={16} className="ml-auto text-white/30"/>
-                        </GlassCard>
-                    ))
-                ) : (
-                    // LISTA DE DEPARTAMENTOS (SUPORTE)
-                    departments.map(dept => (
-                        <GlassCard key={dept.id} onClick={() => handleSelect(dept)} className="p-4 cursor-pointer hover:bg-white/10 flex items-center gap-4 transition-all">
-                            <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10">{dept.icon}</div>
+            {/* Conteúdo: Suporte */}
+            {!isCommunity && (
+                <div className="grid gap-3">
+                    <p className="text-white/50 text-sm">Escolha um departamento:</p>
+                    {supportChannels.map(dept => (
+                        <GlassCard key={dept.id} onClick={() => handleSelect(dept)} className="p-4 cursor-pointer hover:bg-white/10 flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center text-white">{dept.icon}</div>
                             <div><h4 className="font-bold text-white">{dept.name}</h4><p className="text-xs text-white/50">{dept.desc}</p></div>
                             <ArrowRightLeft size={16} className="ml-auto text-white/30"/>
                         </GlassCard>
-                    ))
-                )}
-            </div>
+                    ))}
+                </div>
+            )}
+
+            {/* Conteúdo: Comunidade (Grupos) */}
+            {isCommunity && viewTab === 'groups' && (
+                <>
+                    <NeonButton onClick={() => setShowCreateGroup(!showCreateGroup)} className="w-full mb-4 h-10 text-xs" variant="secondary"><PlusCircle size={14}/> Criar Novo Grupo</NeonButton>
+                    {showCreateGroup && (
+                        <GlassCard className="mb-4 bg-yellow-900/20 border-yellow-500/30 p-3 flex gap-2">
+                            <GlassInput placeholder="Nome do Grupo..." value={newGroupName} onChange={e=>setNewGroupName(e.target.value)}/>
+                            <NeonButton onClick={createGroup}>Criar</NeonButton>
+                        </GlassCard>
+                    )}
+                    <div className="grid gap-3">
+                        {communityGroups.map(g => (
+                            <GlassCard key={g.id} onClick={() => handleSelect(g)} className="p-4 cursor-pointer hover:bg-white/10 flex items-center gap-4">
+                                <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center text-white">{g.icon}</div>
+                                <div><h4 className="font-bold text-white">{g.name}</h4><p className="text-xs text-white/50">{g.desc}</p></div>
+                            </GlassCard>
+                        ))}
+                    </div>
+                </>
+            )}
+
+            {/* Conteúdo: Comunidade (Online - WhatsApp Style) */}
+            {isCommunity && viewTab === 'online' && (
+                <div className="grid gap-3">
+                    {onlineProducers.map(u => (
+                        <GlassCard key={u.id} onClick={() => handleSelect({...u, type: 'user'})} className="p-4 cursor-pointer hover:bg-white/10 flex items-center gap-4">
+                            <div className="relative">
+                                <div className="w-12 h-12 rounded-full bg-indigo-600 flex items-center justify-center text-white font-bold">{u.name[0]}</div>
+                                <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-black"></div>
+                            </div>
+                            <div><h4 className="font-bold text-white">{u.name}</h4><p className="text-xs text-green-400">Online agora</p></div>
+                        </GlassCard>
+                    ))}
+                    {onlineProducers.length === 0 && <p className="text-white/30 text-center">Nenhum outro produtor online.</p>}
+                </div>
+            )}
         </div>
     );
 
-    // 2. TELA DE CHAT (SALA DE BATE-PAPO)
+    // TELA 2: SALA DE CHAT (COM MÍDIA)
     return (
         <div className="h-[600px] flex flex-col bg-black/40 backdrop-blur-xl rounded-3xl border border-white/10 overflow-hidden animate-in fade-in">
             <div className="p-4 border-b border-white/10 bg-white/5 flex justify-between items-center">
                 <div className="flex items-center gap-3">
-                    <button onClick={() => setActiveSlot(null)} className="p-2 hover:bg-white/10 rounded-full text-white transition"><ArrowRightLeft className="rotate-180" size={20}/></button>
+                    <button onClick={() => setActiveSlot(null)} className="p-2 hover:bg-white/10 rounded-full text-white"><ArrowRightLeft className="rotate-180" size={20}/></button>
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white">{activeSlot.icon}</div>
+                        <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white">{activeSlot.icon || <User/>}</div>
                         <div><h3 className="font-bold text-white">{activeSlot.name}</h3><p className="text-xs text-green-400 flex items-center gap-1">● Online</p></div>
                     </div>
                 </div>
@@ -486,9 +521,12 @@ const ChatModule = ({ title, subtitle, userEmail }) => {
             <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
                 {messages.map((m, i) => (
                     <div key={i} className={`flex ${m.sender === 'Eu' ? 'justify-end' : 'justify-start'}`}>
-                        <div className={`max-w-[80%] p-3 rounded-2xl text-sm shadow-md ${m.sender === 'Eu' ? 'bg-gradient-to-br from-green-600 to-green-800 text-white rounded-tr-none' : 'bg-white/10 text-white rounded-tl-none border border-white/5'}`}>
+                        <div className={`max-w-[80%] p-3 rounded-2xl text-sm shadow-md ${m.sender === 'Eu' ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-white/10 text-white rounded-tl-none border border-white/5'}`}>
                             <p className="text-[10px] opacity-50 mb-1 font-bold">{m.sender}</p>
-                            <p>{m.text}</p>
+                            <div className="flex items-center gap-2">
+                                {m.isMedia && (m.type === 'audio' ? <Mic size={16}/> : m.type === 'video' ? <Video size={16}/> : <ImageIcon size={16}/>)}
+                                <span>{m.text}</span>
+                            </div>
                             <p className="text-[9px] text-right opacity-30 mt-1">{m.time}</p>
                         </div>
                     </div>
@@ -496,11 +534,12 @@ const ChatModule = ({ title, subtitle, userEmail }) => {
                 <div ref={endRef}/>
             </div>
             
-            <form onSubmit={handleSend} className="p-4 bg-white/5 border-t border-white/10 flex gap-2">
-                {/* Botões de Mídia (Simulados) */}
-                <button type="button" className="p-2 text-white/50 hover:text-blue-400"><Camera size={20}/></button>
-                <button type="button" className="p-2 text-white/50 hover:text-purple-400"><Paperclip size={20}/></button>
-                <input value={input} onChange={e=>setInput(e.target.value)} className="flex-1 bg-black/30 border border-white/10 rounded-xl px-4 text-white focus:outline-none focus:border-green-500/50" placeholder="Mensagem..."/>
+            {/* INPUT COM MÍDIA */}
+            <form onSubmit={handleSend} className="p-4 bg-white/5 border-t border-white/10 flex gap-2 items-center">
+                <button type="button" onClick={()=>sendMedia('audio')} className="p-2 text-white/50 hover:text-green-400 transition"><Mic size={20}/></button>
+                <button type="button" onClick={()=>sendMedia('video')} className="p-2 text-white/50 hover:text-blue-400 transition"><Video size={20}/></button>
+                <button type="button" onClick={()=>sendMedia('image')} className="p-2 text-white/50 hover:text-purple-400 transition"><Camera size={20}/></button>
+                <input value={input} onChange={e=>setInput(e.target.value)} className="flex-1 bg-black/30 border border-white/10 rounded-xl px-4 text-white focus:outline-none" placeholder="Mensagem..."/>
                 <NeonButton type="submit" className="px-3 rounded-xl" variant="accent"><Send size={18}/></NeonButton>
             </form>
         </div>
@@ -1597,121 +1636,179 @@ const CoordinatorHome = ({ setView, branchData }) => {
     );
 };
 
-// --- MÓDULO TELEMETRIA E IOT (VITALIS CONNECT) ---
-const TelemetryView = () => {
-    const [activeMachine, setActiveMachine] = useState(1);
+// --- MÓDULO TELEMETRIA E IOT (VITALIS CONNECT - ENTERPRISE) ---
+const TelemetryView = ({ role }) => {
+    // Se for Gestor, começa com o primeiro da lista. Se for produtor, fixa nele mesmo.
+    const isManager = ['Admin', 'Coord. Regional', 'Coord. Unidade'].includes(role);
+    const [selectedProducer, setSelectedProducer] = useState("João da Silva");
+    const [activeMachine, setActiveMachine] = useState(0);
     const [isConnecting, setIsConnecting] = useState(false);
 
-    // DADOS MOCKADOS: FROTA CONECTADA
-    const fleet = [
-        { id: 1, name: "John Deere S700", type: "Colheitadeira", status: "Operando", fuel: "68%", speed: "5.4 km/h", yield: "72 sc/ha", lat: 30, lng: 40, brandColor: "text-green-500" },
-        { id: 2, name: "Case Magnum 340", type: "Trator", status: "Parado (Abastecimento)", fuel: "12%", speed: "0.0 km/h", yield: "-", lat: 60, lng: 70, brandColor: "text-red-500" },
-        { id: 3, name: "New Holland T7", type: "Pulverizador", status: "Operando", fuel: "85%", speed: "18.0 km/h", yield: "-", lat: 45, lng: 20, brandColor: "text-blue-400" }
-    ];
+    // DADOS DE SIMULAÇÃO AVANÇADA (DIFERENTES FROTAS POR PRODUTOR)
+    const PRODUCER_FLEETS = {
+        "João da Silva": {
+            farm: "Fazenda Santa Rita (Talhão 04)",
+            activity: "Colheita de Soja",
+            machines: [
+                { id: 1, name: "John Deere S790", type: "Colheitadeira", status: "Operando", fuel: "68%", speed: "5.4 km/h", yield: "78 sc/ha", moisture: "13.2%", engine: "85%", lat: 30, lng: 40, color: "text-green-500" },
+                { id: 2, name: "Valtra T250", type: "Transbordo", status: "Aguardando", fuel: "45%", speed: "0.0 km/h", yield: "-", moisture: "-", engine: "10%", lat: 35, lng: 45, color: "text-yellow-500" }
+            ]
+        },
+        "Agro Santos": {
+            farm: "Estância Velha (Pivô Central)",
+            activity: "Plantio de Trigo",
+            machines: [
+                { id: 3, name: "Case Magnum 340", type: "Trator + Plantadeira", status: "Operando", fuel: "82%", speed: "7.1 km/h", yield: "-", moisture: "-", engine: "92%", lat: 60, lng: 60, color: "text-red-500" },
+                { id: 4, name: "New Holland Defensor", type: "Pulverizador", status: "Em Deslocamento", fuel: "30%", speed: "22.0 km/h", yield: "-", moisture: "-", engine: "60%", lat: 70, lng: 20, color: "text-blue-400" }
+            ]
+        },
+        "Sítio Alvorada": {
+            farm: "Sítio Alvorada (Sede)",
+            activity: "Manutenção",
+            machines: [
+                { id: 5, name: "Massey Ferguson 6700", type: "Trator", status: "Parado", fuel: "90%", speed: "0.0 km/h", yield: "-", moisture: "-", engine: "0%", lat: 50, lng: 50, color: "text-orange-500" }
+            ]
+        }
+    };
 
-    const currentMachine = fleet.find(m => m.id === activeMachine);
+    const currentData = PRODUCER_FLEETS[selectedProducer] || PRODUCER_FLEETS["João da Silva"];
+    const currentMachineData = currentData.machines[activeMachine] || currentData.machines[0];
 
     const handleConnect = () => {
         setIsConnecting(true);
         setTimeout(() => {
             setIsConnecting(false);
-            alert("✅ Conexão via API John Deere Operations Center estabelecida com sucesso!");
+            alert(`✅ Conexão API estabelecida com sucesso para ${selectedProducer}!`);
         }, 2000);
     };
 
     return (
         <div className="space-y-6 animate-in fade-in">
-            <div className="flex justify-between items-center">
-                <h2 className="text-3xl font-bold text-white flex items-center gap-2">
-                    <Signal className="text-blue-400"/> Telemetria em Tempo Real
-                </h2>
-                <div className="flex items-center gap-2">
-                    <span className="flex h-3 w-3 relative">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
-                    </span>
-                    <span className="text-xs text-green-400 font-bold uppercase">Sinal GPS: Forte</span>
+            {/* CABEÇALHO */}
+            <div className="flex flex-col gap-4">
+                <div className="flex justify-between items-center">
+                    <h2 className="text-3xl font-bold text-white flex items-center gap-2">
+                        <MapPin className="text-blue-400"/> Telemetria 4.0
+                    </h2>
+                    <div className="flex items-center gap-2 bg-green-900/30 px-3 py-1 rounded-full border border-green-500/30">
+                        <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                        <span className="text-[10px] text-green-400 font-bold uppercase tracking-wider">Sinal Satélite: OK</span>
+                    </div>
                 </div>
+
+                {/* SELETOR DE PRODUTOR (APENAS PARA GESTORES) */}
+                {isManager && (
+                    <GlassCard className="p-3 bg-blue-900/20 border-blue-500/30">
+                        <label className="text-xs text-blue-300 font-bold uppercase mb-1 block">Monitorar Cooperado:</label>
+                        <div className="relative">
+                            <select 
+                                value={selectedProducer} 
+                                onChange={(e) => { setSelectedProducer(e.target.value); setActiveMachine(0); }}
+                                className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2 text-white focus:outline-none appearance-none cursor-pointer"
+                            >
+                                {Object.keys(PRODUCER_FLEETS).map(p => <option key={p} value={p} className="bg-slate-900">{p}</option>)}
+                            </select>
+                            <ChevronDown className="absolute right-3 top-3 text-white/50" size={16}/>
+                        </div>
+                    </GlassCard>
+                )}
             </div>
 
-            {/* MAPA TÁTICO (SIMULAÇÃO VISUAL) */}
-            <GlassCard className="p-0 h-96 relative overflow-hidden border-t-4 border-blue-500 bg-[#0f172a]">
-                {/* Fundo do Mapa (Estilizado) */}
-                <div className="absolute inset-0 opacity-30" style={{ 
-                    backgroundImage: 'radial-gradient(#334155 1px, transparent 1px)', 
-                    backgroundSize: '20px 20px' 
-                }}></div>
+            {/* MAPA TÁTICO (SIMULAÇÃO VISUAL DE ALTA TECNOLOGIA) */}
+            <GlassCard className="p-0 h-[420px] relative overflow-hidden border-t-4 border-blue-500 bg-[#0f172a] group">
                 
-                {/* Desenho dos Talhões (Simulação) */}
-                <div className="absolute top-10 left-10 w-64 h-40 border-2 border-green-500/30 bg-green-500/10 rounded-xl transform rotate-3 flex items-center justify-center text-green-500/20 font-bold text-4xl">TALHÃO A</div>
-                <div className="absolute bottom-20 right-10 w-56 h-56 border-2 border-yellow-500/30 bg-yellow-500/10 rounded-full flex items-center justify-center text-yellow-500/20 font-bold text-4xl">TALHÃO B</div>
+                {/* Camadas do Mapa (Grid + Radar) */}
+                <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(#334155 1px, transparent 1px)', backgroundSize: '30px 30px' }}></div>
+                <div className="absolute inset-0 bg-[linear-gradient(transparent_98%,_rgba(0,255,255,0.1)_100%)] bg-[length:100%_20px] animate-scan"></div>
 
-                {/* Máquinas no Mapa */}
-                {fleet.map(m => (
+                {/* Informações da Fazenda (HUD) */}
+                <div className="absolute top-4 left-4 z-30">
+                    <h4 className="text-white font-bold text-lg drop-shadow-md">{currentData.farm}</h4>
+                    <p className="text-xs text-green-400 bg-black/60 px-2 py-0.5 rounded w-fit border border-green-500/30">{currentData.activity}</p>
+                </div>
+
+                {/* Desenho dos Talhões (Geometria) */}
+                <div className="absolute top-1/4 left-1/4 w-1/2 h-1/2 border-2 border-white/10 rounded-3xl bg-white/5 transform rotate-12"></div>
+
+                {/* MÁQUINAS (MÓVEIS) */}
+                {currentData.machines.map((m, index) => (
                     <motion.div 
                         key={m.id}
                         layout
                         initial={{ x: m.lng * 3, y: m.lat * 3 }}
                         animate={{ 
-                            x: activeMachine === m.id ? [m.lng * 3, m.lng * 3 + 20, m.lng * 3] : m.lng * 3,
-                            scale: activeMachine === m.id ? 1.2 : 1 
+                            x: activeMachine === index ? [m.lng * 3, m.lng * 3 + 30, m.lng * 3] : m.lng * 3, // Movimento suave se ativo
+                            scale: activeMachine === index ? 1.1 : 1
                         }}
-                        transition={{ duration: 4, repeat: Infinity }}
-                        onClick={() => setActiveMachine(m.id)}
-                        className={`absolute cursor-pointer flex flex-col items-center gap-1 z-20`}
+                        transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+                        onClick={() => setActiveMachine(index)}
+                        className="absolute cursor-pointer flex flex-col items-center gap-1 z-20 group/pin"
                         style={{ top: `${m.lat}%`, left: `${m.lng}%` }}
                     >
-                        <div className={`p-2 rounded-full shadow-xl border-2 ${activeMachine === m.id ? 'bg-white border-blue-500' : 'bg-slate-800 border-white/20'}`}>
-                            <Tractor size={20} className={activeMachine === m.id ? 'text-black' : 'text-white'}/>
+                        {/* Ícone da Máquina */}
+                        <div className={`p-3 rounded-full shadow-[0_0_15px_rgba(0,0,0,0.5)] border-2 transition-all ${activeMachine === index ? 'bg-white border-blue-500 scale-110' : 'bg-slate-800 border-white/20 hover:border-white'}`}>
+                            <Tractor size={20} className={activeMachine === index ? 'text-black' : 'text-white'}/>
                         </div>
-                        <span className="text-[10px] bg-black/80 text-white px-2 py-0.5 rounded whitespace-nowrap">{m.name}</span>
+                        {/* Label da Máquina */}
+                        <span className={`text-[10px] font-bold px-2 py-1 rounded backdrop-blur-md border transition-all ${activeMachine === index ? 'bg-blue-600 text-white border-blue-400' : 'bg-black/60 text-white/70 border-white/10'}`}>
+                            {m.name}
+                        </span>
                     </motion.div>
                 ))}
 
-                {/* Painel Flutuante de Dados */}
-                <div className="absolute bottom-4 left-4 right-4 bg-black/80 backdrop-blur-md p-4 rounded-2xl border border-white/10 flex justify-between items-center">
-                    <div className="flex items-center gap-4">
-                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center bg-white/10 text-2xl`}>
-                            {currentMachine.type === 'Colheitadeira' ? '🌾' : '🚜'}
+                {/* PAINEL DE TELEMETRIA (HUD INFERIOR) */}
+                <div className="absolute bottom-0 left-0 right-0 bg-black/80 backdrop-blur-xl border-t border-white/10 p-4">
+                    <div className="flex justify-between items-center mb-4">
+                        <div className="flex items-center gap-3">
+                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center bg-white/10 text-xl`}>
+                                {currentMachineData.type === 'Colheitadeira' ? '🌾' : '🚜'}
+                            </div>
+                            <div>
+                                <h4 className="font-bold text-white text-sm">{currentMachineData.name}</h4>
+                                <p className={`text-[10px] font-bold uppercase ${currentMachineData.status.includes('Parado') ? 'text-red-500' : 'text-green-400'}`}>
+                                    ● {currentMachineData.status}
+                                </p>
+                            </div>
                         </div>
-                        <div>
-                            <h4 className="font-bold text-white">{currentMachine.name}</h4>
-                            <p className={`text-xs font-bold ${currentMachine.status.includes('Parado') ? 'text-red-400' : 'text-green-400'}`}>
-                                ● {currentMachine.status}
-                            </p>
+                        <div className="text-right">
+                            <p className="text-[9px] text-white/40 uppercase">Operador</p>
+                            <p className="text-xs text-white font-bold">ID #8821</p>
                         </div>
                     </div>
-                    
-                    <div className="flex gap-6 text-center">
-                        <div>
-                            <p className="text-[10px] text-white/50 uppercase flex justify-center gap-1"><Fuel size={10}/> Diesel</p>
-                            <p className="text-white font-mono font-bold">{currentMachine.fuel}</p>
+
+                    {/* Métricas em Grid */}
+                    <div className="grid grid-cols-4 gap-2 text-center">
+                        <div className="bg-white/5 p-2 rounded-lg">
+                            <p className="text-[9px] text-white/40 uppercase mb-1">Velocidade</p>
+                            <p className="text-white font-mono font-bold text-xs">{currentMachineData.speed}</p>
                         </div>
-                        <div>
-                            <p className="text-[10px] text-white/50 uppercase flex justify-center gap-1"><Gauge size={10}/> Veloc.</p>
-                            <p className="text-white font-mono font-bold">{currentMachine.speed}</p>
+                        <div className="bg-white/5 p-2 rounded-lg">
+                            <p className="text-[9px] text-white/40 uppercase mb-1">Motor</p>
+                            <p className="text-white font-mono font-bold text-xs">{currentMachineData.engine}</p>
                         </div>
-                        {currentMachine.yield !== '-' && (
-                            <div className="hidden md:block">
-                                <p className="text-[10px] text-white/50 uppercase">Produtividade</p>
-                                <p className="text-yellow-400 font-mono font-bold">{currentMachine.yield}</p>
-                            </div>
-                        )}
+                        <div className="bg-white/5 p-2 rounded-lg">
+                            <p className="text-[9px] text-white/40 uppercase mb-1">Tanque</p>
+                            <p className={`font-mono font-bold text-xs ${parseInt(currentMachineData.fuel) < 20 ? 'text-red-400 animate-pulse' : 'text-white'}`}>{currentMachineData.fuel}</p>
+                        </div>
+                        <div className="bg-white/5 p-2 rounded-lg border border-yellow-500/20">
+                            <p className="text-[9px] text-yellow-200/60 uppercase mb-1">Colheita</p>
+                            <p className="text-yellow-400 font-mono font-bold text-xs">{currentMachineData.yield}</p>
+                        </div>
                     </div>
                 </div>
             </GlassCard>
 
-            {/* BOTÃO DE INTEGRAÇÃO */}
+            {/* RODAPÉ DE INTEGRAÇÃO */}
             <div className="flex justify-between items-center bg-white/5 p-4 rounded-2xl border border-white/10">
                 <div className="flex items-center gap-3">
                     <Cloud className="text-blue-400"/>
                     <div>
-                        <h4 className="font-bold text-white text-sm">Nuvem de Máquinas</h4>
-                        <p className="text-xs text-white/50">Sincronização com John Deere & Case IH</p>
+                        <h4 className="font-bold text-white text-sm">Integração Cloud</h4>
+                        <p className="text-xs text-white/50">Conectado: John Deere & Case IH</p>
                     </div>
                 </div>
-                <NeonButton onClick={handleConnect} variant="secondary" className="text-xs h-8" disabled={isConnecting}>
-                    {isConnecting ? "Sincronizando..." : "Atualizar Frota"}
+                <NeonButton onClick={handleConnect} variant="secondary" className="text-xs h-8 px-4" disabled={isConnecting}>
+                    {isConnecting ? <Loader className="animate-spin" size={14}/> : "Sincronizar"}
                 </NeonButton>
             </div>
         </div>
@@ -1914,6 +2011,36 @@ const DirectorHome = ({ setView, branchData, activeBranch }) => {
 };
 const OperatorHome = ({ setView }) => (<div className="grid grid-cols-1 gap-6 animate-in fade-in"><GlassCard className="col-span-full border-l-4 border-green-500 text-center py-12 cursor-pointer hover:bg-white/5" onClick={()=>setView('estoque')}><Camera size={48} className="mx-auto mb-4 text-green-400"/><h3 className="text-2xl font-bold text-white">Escanear Entrada</h3></GlassCard></div>);
 const EstoquistaDashboard = ({ setView }) => (<div className="grid grid-cols-1 gap-6 animate-in fade-in"><GlassCard className="col-span-full border-l-4 border-green-500 text-center py-12 cursor-pointer hover:bg-white/5" onClick={()=>setView('estoque')}><Camera size={48} className="mx-auto mb-4 text-green-400"/><h3 className="text-2xl font-bold text-white">Escanear Entrada</h3></GlassCard></div>);
+
+// TELA INICIAL DO PRODUTOR
+const ProducerHome = ({ setView }) => (
+    <div className="space-y-6 animate-in fade-in">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <AgriNewsWidget />
+            <WeatherWidget />
+            <TaskWidget onClick={() => setView('chat')} />
+            <FinanceWidget onClick={() => setView('financeiro')} />
+            
+            <GlassCard className="col-span-2 border-l-4 border-amber-500 flex justify-between items-center cursor-pointer bg-amber-900/10" onClick={() => setView('grains')}>
+                <div><h3 className="text-xl font-bold text-white">Meus Grãos (Agrotitan)</h3><p className="text-sm opacity-70 text-white">5.400 sc disponíveis</p></div>
+                <Wheat size={64} className="opacity-20 text-amber-400"/>
+            </GlassCard>
+
+            <GlassCard className="col-span-2 border-l-4 border-yellow-500 flex justify-between items-center cursor-pointer" onClick={() => setView('marketplace')}>
+                <div><h3 className="text-xl font-bold text-white">Loja Cotribá</h3><p className="text-sm opacity-70 text-white">Insumos disponíveis.</p></div>
+                <Tractor size={64} className="opacity-20 text-white"/>
+            </GlassCard>
+
+            <div className="col-span-full grid grid-cols-2 md:grid-cols-4 gap-4">
+                <button onClick={() => setView('chat')} className="p-6 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/5 flex flex-col items-center gap-2 text-white"><MessageCircle/><span className="text-xs">Consultor</span></button>
+                <button onClick={() => setView('agrilens')} className="p-6 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/5 flex flex-col items-center gap-2 text-white"><ScanEye/><span className="text-xs">AgriLens</span></button>
+                <button onClick={() => setView('pool')} className="p-6 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/5 flex flex-col items-center gap-2 text-white"><Users/><span className="text-xs">Pool</span></button>
+                <button onClick={() => setView('marketplace')} className="p-6 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/5 flex flex-col items-center gap-2 text-white"><ShoppingBag/><span className="text-xs">Loja</span></button>
+            </div>
+        </div>
+    </div>
+);
+
 const SmartHome = ({ role, setView, branchData, activeBranch }) => {
     // 1. Perfis Externos/Operacionais
     if (role === 'Produtor') return <ProducerHome setView={setView} />;
