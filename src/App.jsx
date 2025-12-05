@@ -1204,181 +1204,114 @@ const PoolView = () => {
 };
 
 const RelatoriosView = () => (<div className="space-y-6 animate-in fade-in"><h2 className="text-3xl font-bold flex gap-2 text-white"><FileBarChart/> Relatórios</h2><div className="grid grid-cols-1 md:grid-cols-3 gap-4">{["Vendas", "Estoque", "Inadimplência"].map((r,i)=><GlassCard key={i} className="p-4 flex justify-between cursor-pointer hover:bg-white/10"><span className="font-bold text-white">{r}</span><Download size={16} className="text-white"/></GlassCard>)}</div></div>);
-// 2. MESA DE GRÃOS (TRADING COM GRÁFICO E ROBÔ)
+// 5. MESA DE GRÃOS (VISÃO HÍBRIDA: GESTÃO x PRODUTOR)
 const TradingView = ({ role }) => {
-    const [selectedComm, setSelectedComm] = useState(1); // 1=Soja, 2=Milho, 3=Trigo
-    const [orders, setOrders] = useState([
-        { id: 101, commodity: 'Soja', target: 138.00, qty: 500, type: 'Físico', status: 'Aguardando', date: '28/11' }
-    ]);
+    const [selectedComm, setSelectedComm] = useState(1); 
+    const [orders, setOrders] = useState([{ id: 101, commodity: 'Soja', target: 138.00, qty: 500, type: 'Físico', status: 'Aguardando', date: '28/11' }]); 
     const [newOrder, setNewOrder] = useState({ targetPrice: '', quantity: '', type: 'future' });
 
-    // DADOS COM HISTÓRICO PARA O GRÁFICO
-    const commodities = [
-        { 
-            id: 1, name: 'Soja', price: 135.50, trend: 'up', variation: '+1.2%', icon: '🌱', harvest: 'Safra 24/25',
-            history: [128.5, 130.0, 129.2, 131.5, 133.0, 132.8, 135.5], // Últimos 7 dias
-            color: '#4ade80' // Verde
-        },
-        { 
-            id: 2, name: 'Milho', price: 58.20, trend: 'down', variation: '-0.5%', icon: '🌽', harvest: 'Safrinha 25',
-            history: [60.0, 59.5, 59.8, 59.0, 58.5, 58.0, 58.2], 
-            color: '#fbbf24' // Amarelo
-        },
-        { 
-            id: 3, name: 'Trigo', price: 82.00, trend: 'neutral', variation: '0.0%', icon: '🌾', harvest: 'Inverno 25',
-            history: [80.0, 81.2, 81.0, 82.5, 82.0, 81.8, 82.0],
-            color: '#f87171' // Vermelho/Laranja
-        }
-    ];
+    // Verifica se é Gestão (Vê quem travou) ou Produtor (Trava o seu)
+    const isManager = ['Admin', 'Coord. Regional', 'Coord. Unidade', 'Assist. Administrativo', 'Eng. Agrônomo'].includes(role);
 
+    // DADOS DE MERCADO (COMUM A TODOS)
+    const commodities = [
+        { id: 1, name: 'Soja', price: 135.50, trend: 'up', variation: '+1.2%', icon: '🌱', harvest: 'Safra 24/25', history: [128.5, 130.0, 129.2, 131.5, 133.0, 132.8, 135.5], color: '#4ade80' }, 
+        { id: 2, name: 'Milho', price: 58.20, trend: 'down', variation: '-0.5%', icon: '🌽', harvest: 'Safrinha 25', history: [60.0, 59.5, 59.8, 59.0, 58.5, 58.0, 58.2], color: '#fbbf24' }, 
+        { id: 3, name: 'Trigo', price: 82.00, trend: 'neutral', variation: '0.0%', icon: '🌾', harvest: 'Inverno 25', history: [80.0, 81.2, 81.0, 82.5, 82.0, 81.8, 82.0], color: '#f87171' }
+    ];
     const activeAsset = commodities.find(c => c.id === selectedComm);
 
-    // COMPONENTE DE GRÁFICO LEVE (SVG)
-    const MiniChart = ({ data, color }) => {
-        const max = Math.max(...data);
-        const min = Math.min(...data);
-        const range = max - min || 1;
-        
-        // Gera os pontos da linha (coordenadas X,Y)
-        const points = data.map((val, i) => {
-            const x = (i / (data.length - 1)) * 100;
-            const y = 100 - ((val - min) / range) * 80 - 10; // Margem de 10%
-            return `${x},${y}`;
-        }).join(' ');
+    // DADOS DOS PRODUTORES (SÓ GESTÃO VÊ)
+    const producerLocks = [
+        { id: 1, produtor: "João da Silva", commodity: "Soja", alvo: 138.00, vol: "1.000 sc", tipo: "Futura", status: "Aberto" },
+        { id: 2, produtor: "Sítio Alvorada", commodity: "Milho", alvo: 60.00, vol: "500 sc", tipo: "Física", status: "Executado" },
+        { id: 3, produtor: "Agro Santos", commodity: "Soja", alvo: 140.00, vol: "5.000 sc", tipo: "Futura", status: "Aberto" },
+        { id: 4, produtor: "Faz. Boa Vista", commodity: "Trigo", alvo: 85.00, vol: "2.000 sc", tipo: "Física", status: "Aberto" }
+    ];
 
+    // GRÁFICO SIMPLES (SVG)
+    const MiniChart = ({ data, color }) => {
+        const max = Math.max(...data); const min = Math.min(...data); const range = max - min || 1;
+        const points = data.map((val, i) => { const x = (i / (data.length - 1)) * 100; const y = 100 - ((val - min) / range) * 80 - 10; return `${x},${y}`; }).join(' ');
         return (
             <div className="w-full h-40 mt-4 relative">
                 <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="w-full h-full overflow-visible">
-                    {/* Gradiente de Fundo */}
-                    <defs>
-                        <linearGradient id={`grad-${color}`} x1="0" x2="0" y1="0" y2="1">
-                            <stop offset="0%" stopColor={color} stopOpacity="0.3"/>
-                            <stop offset="100%" stopColor={color} stopOpacity="0"/>
-                        </linearGradient>
-                    </defs>
+                    <defs><linearGradient id={`grad-${color}`} x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stopColor={color} stopOpacity="0.3"/><stop offset="100%" stopColor={color} stopOpacity="0"/></linearGradient></defs>
                     <polygon points={`0,100 ${points} 100,100`} fill={`url(#grad-${color})`} />
-                    {/* Linha Principal */}
                     <polyline points={points} fill="none" stroke={color} strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinecap="round" strokeLinejoin="round"/>
-                    {/* Pontos de Dados */}
-                    {data.map((val, i) => {
-                        const x = (i / (data.length - 1)) * 100;
-                        const y = 100 - ((val - min) / range) * 80 - 10;
-                        return <circle key={i} cx={x} cy={y} r="1.5" fill="#fff" stroke={color} strokeWidth="0.5"/>;
-                    })}
+                    {data.map((val, i) => { const x = (i / (data.length - 1)) * 100; const y = 100 - ((val - min) / range) * 80 - 10; return <circle key={i} cx={x} cy={y} r="1.5" fill="#fff" stroke={color} strokeWidth="0.5"/>; })}
                 </svg>
-                {/* Indicadores de Máx/Min */}
                 <div className="absolute top-0 right-0 text-[10px] text-white/50 bg-black/40 px-2 rounded">Máx: {formatCurrency(max)}</div>
-                <div className="absolute bottom-0 right-0 text-[10px] text-white/50 bg-black/40 px-2 rounded">Mín: {formatCurrency(min)}</div>
             </div>
         );
     };
 
-    const handleCreateLock = () => {
-        if (!newOrder.targetPrice || !newOrder.quantity) return alert("Preencha todos os campos para ativar o robô.");
-        
-        const order = {
-            id: Date.now(),
-            commodity: activeAsset.name,
-            target: parseFloat(newOrder.targetPrice),
-            qty: parseInt(newOrder.quantity),
-            type: newOrder.type === 'physical' ? 'Saldo em Silo' : 'Venda Futura',
-            status: 'Ativa (Monitorando)',
-            date: 'Hoje'
-        };
-        
-        setOrders([order, ...orders]);
-        alert(`✅ Robô Configurado!\n\nSe a ${activeAsset.name} bater R$ ${order.target}, a venda será executada automaticamente.`);
-        setNewOrder({ ...newOrder, targetPrice: '', quantity: '' });
+    const handleCreateLock = () => { 
+        if (!newOrder.targetPrice || !newOrder.quantity) return alert("Preencha todos os campos."); 
+        const order = { id: Date.now(), commodity: activeAsset.name, target: parseFloat(newOrder.targetPrice), qty: parseInt(newOrder.quantity), type: newOrder.type === 'physical' ? 'Saldo em Silo' : 'Venda Futura', status: 'Ativa', date: 'Hoje' }; 
+        setOrders([order, ...orders]); alert(`✅ Ordem Criada!`); setNewOrder({ ...newOrder, targetPrice: '', quantity: '' }); 
     };
 
     return (
         <div className="space-y-6 animate-in fade-in">
             <div className="flex justify-between items-center">
-                 <h2 className="text-3xl font-bold flex gap-2 text-white"><Gavel className="text-amber-400"/> Mesa de Grãos</h2>
-                 {/* Seletor de Grão */}
-                 <div className="flex bg-white/10 p-1 rounded-xl">
-                    {commodities.map(c => (
-                        <button 
-                            key={c.id} 
-                            onClick={() => setSelectedComm(c.id)}
-                            className={`px-3 py-1 rounded-lg text-xs font-bold transition ${selectedComm === c.id ? 'bg-white text-black shadow' : 'text-white/50 hover:text-white'}`}
-                        >
-                            {c.name}
-                        </button>
-                    ))}
-                 </div>
+                 <h2 className="text-3xl font-bold flex gap-2 text-white"><Gavel className="text-amber-400"/> Comercialização</h2>
+                 <div className="flex bg-white/10 p-1 rounded-xl">{commodities.map(c => (<button key={c.id} onClick={()=>setSelectedComm(c.id)} className={`px-3 py-1 rounded-lg text-xs font-bold transition ${selectedComm === c.id ? 'bg-white text-black' : 'text-white/50'}`}>{c.name}</button>))}</div>
             </div>
 
-            {/* CARD PRINCIPAL (GRÁFICO) */}
+            {/* GRÁFICO (VISÍVEL PARA TODOS) */}
             <GlassCard className="border-l-4 border-white/20 relative overflow-hidden">
                 <div className="flex justify-between items-end relative z-10">
                     <div>
                         <p className="text-white/50 text-xs uppercase font-bold mb-1 flex items-center gap-1">{activeAsset.icon} {activeAsset.harvest}</p>
                         <h3 className="text-5xl font-black text-white tracking-tighter">{formatCurrency(activeAsset.price)}</h3>
-                        <p className={`text-sm font-bold flex items-center gap-1 mt-1 ${activeAsset.trend === 'up' ? 'text-green-400' : 'text-red-400'}`}>
-                            <Activity size={14}/> {activeAsset.variation} nas últimas 24h
-                        </p>
+                        <p className={`text-sm font-bold flex items-center gap-1 mt-1 ${activeAsset.trend === 'up' ? 'text-green-400' : 'text-red-400'}`}><Activity size={14}/> {activeAsset.variation} hoje</p>
                     </div>
-                    <div className="text-right hidden md:block">
-                        <p className="text-xs text-white/40">Chicago (CBOT) - Delay 15min</p>
-                    </div>
+                    <div className="text-right hidden md:block"><p className="text-xs text-white/40">Chicago (CBOT) - Delay 15min</p></div>
                 </div>
-
-                {/* O Gráfico desenhado na hora */}
                 <MiniChart data={activeAsset.history} color={activeAsset.color} />
             </GlassCard>
 
-            {/* FERRAMENTAS DE VENDA */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                
-                {/* Robô de Trava Automática */}
-                <GlassCard className="border-t-4 border-amber-500 bg-amber-900/10">
-                    <h3 className="font-bold text-white mb-4 flex items-center gap-2"><LockKeyhole className="text-amber-400"/> Trava Automática (Target)</h3>
-                    
-                    <div className="space-y-4">
-                        <div className="flex bg-black/40 p-1 rounded-xl">
-                            <button onClick={() => setNewOrder({...newOrder, type: 'future'})} className={`flex-1 py-2 rounded-lg text-xs font-bold transition ${newOrder.type === 'future' ? 'bg-amber-500 text-black' : 'text-white/50'}`}>🚜 Futura (Lavoura)</button>
-                            <button onClick={() => setNewOrder({...newOrder, type: 'physical'})} className={`flex-1 py-2 rounded-lg text-xs font-bold transition ${newOrder.type === 'physical' ? 'bg-amber-500 text-black' : 'text-white/50'}`}>🏭 Física (Silo)</button>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                            <GlassInput label="Qtd (Sacas)" type="number" value={newOrder.quantity} onChange={e=>setNewOrder({...newOrder, quantity: e.target.value})} placeholder="1000"/>
-                            <GlassInput label="Preço Alvo (R$)" type="number" value={newOrder.targetPrice} onChange={e=>setNewOrder({...newOrder, targetPrice: e.target.value})} placeholder="140.00"/>
-                        </div>
-                        
-                        <div className="flex justify-between text-[10px] text-white/40 px-1">
-                            <span>Atual: {formatCurrency(activeAsset.price)}</span>
-                            <span>Total Est.: {formatCurrency((newOrder.targetPrice || 0) * (newOrder.quantity || 0))}</span>
-                        </div>
-
-                        <NeonButton onClick={handleCreateLock} variant="accent" className="w-full mt-2">Armar Robô de Venda</NeonButton>
+            {/* ÁREA CONDICIONAL: GESTÃO vs PRODUTOR */}
+            {isManager ? (
+                // VISÃO DO GESTOR (Monitor de Travas)
+                <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                        <h3 className="font-bold text-white flex gap-2 items-center"><Users size={18}/> Produtores com Preço Travado</h3>
+                        <button className="text-xs text-blue-400 border border-blue-500/30 px-3 py-1 rounded hover:bg-blue-500/10">Exportar Relatório</button>
                     </div>
-                </GlassCard>
-
-                {/* Carteira de Ordens */}
-                <GlassCard>
-                    <div className="flex justify-between items-center mb-4"><h3 className="font-bold text-white">Minhas Ordens</h3><Filter size={16} className="text-white/30"/></div>
-                    <div className="space-y-3 max-h-[280px] overflow-y-auto custom-scrollbar">
-                        {orders.length === 0 && <p className="text-white/30 text-center py-8 text-xs">Nenhuma ordem ativa.</p>}
-                        {orders.map(o => (
-                            <div key={o.id} className="bg-white/5 p-3 rounded-xl border border-white/10 flex justify-between items-center group hover:bg-white/10 transition">
+                    <div className="grid gap-3">
+                        {producerLocks.map(lock => (
+                            <GlassCard key={lock.id} className="p-3 flex justify-between items-center border-l-4 border-amber-500">
                                 <div>
-                                    <div className="flex items-center gap-2 mb-1">
-                                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${o.type.includes('Futura') ? 'bg-blue-500/20 text-blue-300' : 'bg-orange-500/20 text-orange-300'}`}>{o.type}</span>
-                                        <span className="text-[10px] text-white/30">{o.date}</span>
+                                    <h4 className="font-bold text-white text-sm">{lock.produtor}</h4>
+                                    <div className="flex gap-2 mt-1">
+                                        <span className="text-[10px] bg-white/10 text-white px-1.5 rounded">{lock.commodity}</span>
+                                        <span className={`text-[10px] px-1.5 rounded ${lock.tipo === 'Futura' ? 'bg-blue-500/20 text-blue-300' : 'bg-green-500/20 text-green-300'}`}>{lock.tipo}</span>
                                     </div>
-                                    <p className="font-bold text-white">{o.commodity} <span className="text-xs text-white/50">({o.qty} sc)</span></p>
-                                    <p className="text-xs text-amber-400 font-mono font-bold">Alvo: {formatCurrency(o.target)}</p>
                                 </div>
                                 <div className="text-right">
-                                    <span className="text-[10px] bg-green-500/10 text-green-400 px-2 py-1 rounded border border-green-500/20 uppercase font-bold">{o.status}</span>
-                                    <button className="block text-[10px] text-red-400 mt-2 hover:underline w-full text-right">Cancelar</button>
+                                    <p className="text-amber-400 font-mono font-bold text-lg">{formatCurrency(lock.alvo)}</p>
+                                    <p className="text-[10px] text-white/50">{lock.vol} • {lock.status}</p>
                                 </div>
-                            </div>
+                            </GlassCard>
                         ))}
                     </div>
-                </GlassCard>
-            </div>
+                </div>
+            ) : (
+                // VISÃO DO PRODUTOR (Robô de Venda)
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <GlassCard className="border-t-4 border-amber-500 bg-amber-900/10">
+                        <h3 className="font-bold text-white mb-4 flex items-center gap-2"><LockKeyhole/> Trava Automática</h3>
+                        <div className="space-y-4">
+                            <div className="flex bg-black/40 p-1 rounded-xl"><button onClick={() => setNewOrder({...newOrder, type: 'future'})} className={`flex-1 py-2 rounded-lg text-xs font-bold transition ${newOrder.type === 'future' ? 'bg-amber-500 text-black' : 'text-white/50'}`}>🚜 Futura</button><button onClick={() => setNewOrder({...newOrder, type: 'physical'})} className={`flex-1 py-2 rounded-lg text-xs font-bold transition ${newOrder.type === 'physical' ? 'bg-amber-500 text-black' : 'text-white/50'}`}>🏭 Física</button></div>
+                            <div className="grid grid-cols-2 gap-4"><GlassInput label="Qtd" type="number" value={newOrder.quantity} onChange={e=>setNewOrder({...newOrder, quantity: e.target.value})}/><GlassInput label="Alvo" type="number" value={newOrder.targetPrice} onChange={e=>setNewOrder({...newOrder, targetPrice: e.target.value})}/></div>
+                            <NeonButton onClick={handleCreateLock} variant="accent" className="w-full mt-2">Armar Robô</NeonButton>
+                        </div>
+                    </GlassCard>
+                    <GlassCard><h3 className="font-bold text-white mb-4">Minhas Ordens</h3><div className="space-y-3 max-h-[280px] overflow-y-auto custom-scrollbar">{orders.map(o => (<div key={o.id} className="bg-white/5 p-3 rounded-xl border border-white/10 flex justify-between items-center"><div><p className="font-bold text-white">{o.commodity} <span className="text-xs text-white/50">({o.qty} sc)</span></p><p className="text-xs text-amber-400 font-mono font-bold">Alvo: {formatCurrency(o.target)}</p></div><div className="text-right"><span className="text-[10px] bg-green-500/10 text-green-400 px-2 py-1 rounded border border-green-500/20">{o.status}</span></div></div>))}</div></GlassCard>
+                </div>
+            )}
         </div>
     );
 };
@@ -1536,46 +1469,55 @@ const EstoqueView = ({ role, activeBranch }) => {
     );
 };
 
-// --- HOMES (COORDENADOR DE UNIDADE - RICARDO) ---
+// --- HOMES (COORDENADOR DE UNIDADE - RICARDO - COM VISÃO DE GRÃOS) ---
 const CoordinatorHome = ({ setView, branchData }) => {
-    const [activeTab, setActiveTab] = useState('dashboard'); // dashboard, sede, clientes, pool_criador, travas
+    const [activeTab, setActiveTab] = useState('dashboard'); // dashboard, graos_fisico, travas, pool_criador, sede, clientes
     const [searchTerm, setSearchTerm] = useState('');
     const [searchResult, setSearchResult] = useState(null);
+    const [newCampaign, setNewCampaign] = useState({ name: '', target: '', discountPrice: '' });
     
-    // DADOS MOCKADOS: TRAVAS DE GRÃOS (ORIGINAÇÃO)
+    // DADOS: TRAVAS DE GRÃOS (COMERCIAL)
     const grainLocks = [
         { id: 1, produtor: "João da Silva", produto: "Soja", qtd: "1.000 sc", alvo: "R$ 138,00", status: "Aguardando Mercado" },
         { id: 2, produtor: "Agro Santos", produto: "Trigo", qtd: "500 sc", alvo: "R$ 85,00", status: "Executado" },
         { id: 3, produtor: "Sítio Alvorada", produto: "Milho", qtd: "2.000 sc", alvo: "R$ 60,00", status: "Aguardando Mercado" }
     ];
 
-    // DADOS MOCKADOS: ESTOQUE DA SEDE (IBIRUBÁ)
+    // DADOS: ESTOQUE DA SEDE
     const matrizStock = [
         { id: 1, name: "Ureia Agrícola", qtd: 15000, unit: "Sacos" },
         { id: 2, name: "Glifosato 480", qtd: 5000, unit: "Litros" },
         { id: 3, name: "Semente Soja Intacta", qtd: 800, unit: "Sacos" }
     ];
 
-    // ESTADO PARA NOVA CAMPANHA
-    const [newCampaign, setNewCampaign] = useState({ name: '', target: '', discountPrice: '' });
+    // DADOS NOVOS: POSIÇÃO FÍSICA DE GRÃOS (ARMAZÉM LOCAL)
+    const producerGrainStocks = [
+        { id: 1, name: "João da Silva", soja: 5400, milho: 1200, trigo: 0, sobra: 12.5 },
+        { id: 2, name: "Agro Santos Ltda", soja: 12800, milho: 5000, trigo: 2000, sobra: 4.2 },
+        { id: 3, name: "Sítio Alvorada", soja: 2100, milho: 0, trigo: 0, sobra: -2.1 }, // Alerta
+        { id: 4, name: "Fazenda Boa Vista", soja: 8500, milho: 3000, trigo: 1500, sobra: 8.0 },
+        { id: 5, name: "Cooperado Paulo", soja: 1500, milho: 0, trigo: 0, sobra: 15.0 }
+    ];
 
+    // Cálculo dos Totais Locais
+    const totalSoja = producerGrainStocks.reduce((acc, curr) => acc + curr.soja, 0);
+    const totalMilho = producerGrainStocks.reduce((acc, curr) => acc + curr.milho, 0);
+    const mediaSobra = (producerGrainStocks.reduce((acc, curr) => acc + curr.sobra, 0) / producerGrainStocks.length).toFixed(2);
+
+    // Funções
     const handleCreateCampaign = () => {
-        if(!newCampaign.name || !newCampaign.target) return alert("Preencha os dados da campanha.");
-        alert(`🚀 Campanha "${newCampaign.name}" lançada para a base de produtores!\nMeta: ${newCampaign.target}`);
+        if(!newCampaign.name || !newCampaign.target) return alert("Preencha os dados.");
+        alert(`🚀 Campanha "${newCampaign.name}" ativada com sucesso!`);
         setNewCampaign({ name: '', target: '', discountPrice: '' });
     };
-
     const handleSearchClient = () => {
         if (!searchTerm) return;
-        setSearchResult({
-            name: "João da Silva", doc: "000.123.456-78", score: "A",
-            debt: "R$ 15.200", limit: "R$ 150.000"
-        });
+        setSearchResult({ name: "João da Silva", doc: "000.123.456-78", score: "A", debt: "R$ 15.200", limit: "R$ 150.000" });
     };
 
     return (
         <div className="space-y-6 animate-in fade-in">
-            {/* CABEÇALHO FIXO SÃO FRANCISCO */}
+            {/* CABEÇALHO */}
             <div className="flex flex-col gap-4">
                 <div className="flex justify-between items-center">
                     <div>
@@ -1587,9 +1529,9 @@ const CoordinatorHome = ({ setView, branchData }) => {
                 
                 {/* MENU DO COORDENADOR */}
                 <div className="flex gap-2 bg-black/20 p-1 rounded-xl overflow-x-auto no-scrollbar">
-                    {['dashboard', 'sede', 'clientes', 'pool_criador', 'travas'].map(tab => (
+                    {['dashboard', 'graos_fisico', 'travas', 'pool_criador', 'sede', 'clientes'].map(tab => (
                         <button key={tab} onClick={() => setActiveTab(tab)} className={`flex-1 px-4 py-2 rounded-lg text-xs font-bold uppercase whitespace-nowrap transition ${activeTab === tab ? 'bg-blue-600 text-white shadow-lg' : 'text-white/50 hover:text-white'}`}>
-                            {tab === 'dashboard' ? 'Visão Geral' : tab === 'sede' ? 'Estoque Matriz' : tab === 'pool_criador' ? 'Criar Campanha' : tab === 'travas' ? 'Originação' : 'Clientes'}
+                            {tab === 'dashboard' ? 'Visão Geral' : tab === 'graos_fisico' ? '🌾 Posição Física' : tab === 'travas' ? 'Originação' : tab === 'pool_criador' ? 'Criar Campanha' : tab === 'sede' ? 'Estoque Matriz' : 'Clientes'}
                         </button>
                     ))}
                 </div>
@@ -1600,7 +1542,7 @@ const CoordinatorHome = ({ setView, branchData }) => {
                 <>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <GlassCard className="cursor-pointer hover:bg-white/5 border-l-4 border-green-500" onClick={() => setView('estoque')}>
-                            <div className="flex justify-between"><div><p className="text-white/60 text-xs">Estoque Local</p><h3 className="text-2xl font-black text-white">{branchData.stock}</h3></div><Package className="text-green-400"/></div>
+                            <div className="flex justify-between"><div><p className="text-white/60 text-xs">Estoque Insumos</p><h3 className="text-2xl font-black text-white">{branchData.stock}</h3></div><Package className="text-green-400"/></div>
                         </GlassCard>
                         <GlassCard className="cursor-pointer hover:bg-white/5 border-l-4 border-blue-500" onClick={() => setView('financeiro')}>
                             <div className="flex justify-between"><div><p className="text-white/60 text-xs">Vendas Hoje</p><h3 className="text-2xl font-black text-white">{branchData.sales}</h3></div><ShoppingBag className="text-blue-400"/></div>
@@ -1612,79 +1554,91 @@ const CoordinatorHome = ({ setView, branchData }) => {
                 </>
             )}
 
-            {/* --- ABA 2: CONSULTA ESTOQUE SEDE --- */}
-            {activeTab === 'sede' && (
-                <div className="space-y-4">
-                    <div className="bg-blue-900/20 border border-blue-500/30 p-4 rounded-2xl">
-                        <h3 className="font-bold text-white mb-1 flex items-center gap-2"><Search size={18}/> Estoque Central (Ibirubá)</h3>
-                        <p className="text-xs text-white/60">Consulte antes de solicitar transferência.</p>
+            {/* --- ABA 2: POSIÇÃO FÍSICA DE GRÃOS (NOVA) --- */}
+            {activeTab === 'graos_fisico' && (
+                <div className="space-y-6 animate-in fade-in">
+                    <div className="grid grid-cols-3 gap-3">
+                        <GlassCard className="p-3 bg-yellow-900/20 border-yellow-500/30 text-center">
+                            <p className="text-[10px] text-white/50 uppercase font-bold">Total Soja</p>
+                            <p className="text-xl font-black text-yellow-400">{totalSoja.toLocaleString()} <span className="text-[10px]">sc</span></p>
+                        </GlassCard>
+                        <GlassCard className="p-3 bg-orange-900/20 border-orange-500/30 text-center">
+                            <p className="text-[10px] text-white/50 uppercase font-bold">Total Milho</p>
+                            <p className="text-xl font-black text-orange-400">{totalMilho.toLocaleString()} <span className="text-[10px]">sc</span></p>
+                        </GlassCard>
+                        <GlassCard className="p-3 bg-blue-900/20 border-blue-500/30 text-center">
+                            <p className="text-[10px] text-white/50 uppercase font-bold">Sobra Média</p>
+                            <p className={`text-xl font-black ${mediaSobra >= 0 ? 'text-green-400' : 'text-red-400'}`}>{mediaSobra}%</p>
+                        </GlassCard>
                     </div>
-                    <div className="grid gap-2">
-                        {matrizStock.map(i => (
-                            <GlassCard key={i.id} className="p-3 flex justify-between items-center">
-                                <span className="text-white font-bold text-sm">{i.name}</span>
-                                <span className="text-green-400 font-mono">{i.qtd} {i.unit}</span>
-                            </GlassCard>
-                        ))}
+
+                    <div>
+                        <div className="flex justify-between items-center mb-3">
+                            <h3 className="font-bold text-white">Detalhamento por Produtor</h3>
+                            <button className="text-xs text-blue-400 flex items-center gap-1"><Download size={14}/> Exportar</button>
+                        </div>
+                        <div className="space-y-2">
+                            <div className="grid grid-cols-12 text-[10px] text-white/40 px-4 uppercase font-bold">
+                                <div className="col-span-5">Produtor</div>
+                                <div className="col-span-3 text-center">Soja</div>
+                                <div className="col-span-3 text-center">Milho</div>
+                                <div className="col-span-1 text-right">Sobra</div>
+                            </div>
+                            {producerGrainStocks.map(p => (
+                                <div key={p.id} className="bg-white/5 p-3 rounded-xl border border-white/5 grid grid-cols-12 items-center hover:bg-white/10 transition">
+                                    <div className="col-span-5"><p className="text-sm font-bold text-white truncate">{p.name}</p></div>
+                                    <div className="col-span-3 text-center"><p className="text-xs text-yellow-200 font-mono">{p.soja.toLocaleString()}</p></div>
+                                    <div className="col-span-3 text-center"><p className="text-xs text-orange-200 font-mono">{p.milho > 0 ? p.milho.toLocaleString() : '-'}</p></div>
+                                    <div className="col-span-1 text-right"><span className={`text-[10px] font-bold ${p.sobra < 0 ? 'text-red-400' : 'text-green-400'}`}>{p.sobra > 0 ? '+' : ''}{p.sobra}%</span></div>
+                                </div>
+                            ))}
+                        </div>
                     </div>
-                    <NeonButton className="w-full mt-2 text-xs h-10">Solicitar Transferência</NeonButton>
                 </div>
             )}
 
-            {/* --- ABA 3: CRIADOR DE CAMPANHAS (POOL) --- */}
+            {/* --- ABA 3: MONITOR DE TRAVAS (ORIGINAÇÃO) --- */}
+            {activeTab === 'travas' && (
+                <div className="space-y-4">
+                    <h3 className="font-bold text-white flex gap-2 items-center"><Lock size={18}/> Monitor de Travas (Agrotitan)</h3>
+                    {grainLocks.map(lock => (
+                        <GlassCard key={lock.id} className="flex justify-between items-center p-3 border-l-4 border-amber-500">
+                            <div><h4 className="font-bold text-white text-sm">{lock.produtor}</h4><p className="text-xs text-white/50">{lock.produto} • {lock.qtd}</p></div>
+                            <div className="text-right"><p className="text-amber-400 font-mono font-bold">{lock.alvo}</p><span className="text-[9px] uppercase bg-white/10 px-2 py-0.5 rounded text-white/60">{lock.status}</span></div>
+                        </GlassCard>
+                    ))}
+                </div>
+            )}
+
+            {/* --- ABA 4: CRIADOR DE CAMPANHAS --- */}
             {activeTab === 'pool_criador' && (
                 <GlassCard className="border-t-4 border-teal-500">
-                    <h3 className="font-bold text-white mb-4 flex items-center gap-2"><Megaphone className="text-teal-400"/> Lançar Nova Campanha</h3>
+                    <h3 className="font-bold text-white mb-4 flex items-center gap-2"><Megaphone className="text-teal-400"/> Lançar Campanha</h3>
                     <div className="space-y-4">
-                        <GlassInput label="Nome do Produto (Ex: Glifosato)" value={newCampaign.name} onChange={e=>setNewCampaign({...newCampaign, name:e.target.value})}/>
+                        <GlassInput label="Nome do Produto" value={newCampaign.name} onChange={e=>setNewCampaign({...newCampaign, name:e.target.value})}/>
                         <div className="grid grid-cols-2 gap-4">
                             <GlassInput label="Meta (Qtd)" type="number" value={newCampaign.target} onChange={e=>setNewCampaign({...newCampaign, target:e.target.value})}/>
-                            <GlassInput label="Preço Promocional" type="number" value={newCampaign.discountPrice} onChange={e=>setNewCampaign({...newCampaign, discountPrice:e.target.value})}/>
-                        </div>
-                        <div className="bg-teal-900/20 p-3 rounded-xl text-xs text-teal-200 border border-teal-500/20">
-                            ℹ️ A campanha aparecerá para todos os produtores da unidade. O desconto só ativa ao bater a meta.
+                            <GlassInput label="Preço Promo" type="number" value={newCampaign.discountPrice} onChange={e=>setNewCampaign({...newCampaign, discountPrice:e.target.value})}/>
                         </div>
                         <NeonButton onClick={handleCreateCampaign} variant="accent" className="w-full">Publicar no App</NeonButton>
                     </div>
                 </GlassCard>
             )}
 
-            {/* --- ABA 4: MONITOR DE TRAVAS (GRÃOS) --- */}
-            {activeTab === 'travas' && (
+            {/* --- ABA 5: CONSULTA MATRIZ --- */}
+            {activeTab === 'sede' && (
                 <div className="space-y-4">
-                    <h3 className="font-bold text-white flex gap-2 items-center"><Lock size={18}/> Monitor de Originação</h3>
-                    {grainLocks.map(lock => (
-                        <GlassCard key={lock.id} className="flex justify-between items-center p-3 border-l-4 border-amber-500">
-                            <div>
-                                <h4 className="font-bold text-white text-sm">{lock.produtor}</h4>
-                                <p className="text-xs text-white/50">{lock.produto} • {lock.qtd}</p>
-                            </div>
-                            <div className="text-right">
-                                <p className="text-amber-400 font-mono font-bold">{lock.alvo}</p>
-                                <span className="text-[9px] uppercase bg-white/10 px-2 py-0.5 rounded text-white/60">{lock.status}</span>
-                            </div>
-                        </GlassCard>
-                    ))}
+                    <div className="bg-blue-900/20 border border-blue-500/30 p-4 rounded-2xl"><h3 className="font-bold text-white mb-1 flex items-center gap-2"><Search size={18}/> Estoque Central</h3><p className="text-xs text-white/60">Consulte antes de pedir transferência.</p></div>
+                    <div className="grid gap-2">{matrizStock.map(i => (<GlassCard key={i.id} className="p-3 flex justify-between items-center"><span className="text-white font-bold text-sm">{i.name}</span><span className="text-green-400 font-mono">{i.qtd} {i.unit}</span></GlassCard>))}</div>
+                    <NeonButton className="w-full mt-2 text-xs h-10">Solicitar Transferência</NeonButton>
                 </div>
             )}
 
-            {/* --- ABA 5: CLIENTES --- */}
+            {/* --- ABA 6: CLIENTES --- */}
             {activeTab === 'clientes' && (
                 <div className="space-y-4">
-                    <div className="relative">
-                        <input value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Buscar Produtor..." className="w-full bg-black/30 border border-white/10 rounded-2xl pl-4 pr-12 py-3 text-white focus:outline-none"/>
-                        <button onClick={handleSearchClient} className="absolute right-2 top-2 p-1.5 bg-blue-600 rounded-lg text-white"><Search size={16}/></button>
-                    </div>
-                    {searchResult && (
-                        <GlassCard className="border-t-4 border-green-500 animate-in fade-in">
-                            <div className="flex justify-between"><h3 className="font-bold text-white">{searchResult.name}</h3><span className="bg-green-500/20 text-green-400 text-xs px-2 rounded">{searchResult.score}</span></div>
-                            <div className="grid grid-cols-2 gap-4 mt-4 text-xs">
-                                <div><p className="text-white/40">Dívida</p><p className="text-red-400 font-bold">{searchResult.debt}</p></div>
-                                <div><p className="text-white/40">Limite</p><p className="text-green-400 font-bold">{searchResult.limit}</p></div>
-                            </div>
-                            <div className="mt-4 flex gap-2"><button className="flex-1 py-2 bg-white/10 rounded text-xs text-white">Ver Ficha</button><button className="flex-1 py-2 bg-white/10 rounded text-xs text-white">Histórico</button></div>
-                        </GlassCard>
-                    )}
+                    <div className="relative"><input value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Buscar Produtor..." className="w-full bg-black/30 border border-white/10 rounded-2xl pl-4 pr-12 py-3 text-white focus:outline-none"/><button onClick={handleSearchClient} className="absolute right-2 top-2 p-1.5 bg-blue-600 rounded-lg text-white"><Search size={16}/></button></div>
+                    {searchResult && (<GlassCard className="border-t-4 border-green-500 animate-in fade-in"><div className="flex justify-between"><h3 className="font-bold text-white">{searchResult.name}</h3><span className="bg-green-500/20 text-green-400 text-xs px-2 rounded">{searchResult.score}</span></div><div className="grid grid-cols-2 gap-4 mt-4 text-xs"><div><p className="text-white/40">Dívida</p><p className="text-red-400 font-bold">{searchResult.debt}</p></div><div><p className="text-white/40">Limite</p><p className="text-green-400 font-bold">{searchResult.limit}</p></div></div></GlassCard>)}
                 </div>
             )}
         </div>
@@ -1870,195 +1824,162 @@ const TelemetryView = ({ role }) => {
     );
 };
 
-// --- HOMES (DIRETORIA / REGIONAL - SEM APROVAÇÃO FINANCEIRA) ---
+// --- HOMES (DIRETORIA / REGIONAL - COM POSIÇÃO DE GRÃOS DETALHADA) ---
 const DirectorHome = ({ setView, branchData, activeBranch }) => {
-    const [activeTab, setActiveTab] = useState('dashboard'); // dashboard, estoque_sede, clientes
+    const [activeTab, setActiveTab] = useState('dashboard'); // dashboard, graos_unidade, estoque_sede, clientes
     const [searchTerm, setSearchTerm] = useState('');
     const [stockSearch, setStockSearch] = useState('');
     const [searchResult, setSearchResult] = useState(null);
 
-    // DADOS MOCKADOS: ESTOQUE DA SEDE (IBIRUBÁ) PARA CONSULTA RÁPIDA
+    // DADOS: ESTOQUE DA SEDE (IBIRUBÁ)
     const matrizStock = [
         { id: 1, name: "Ureia Agrícola", qtd: 15000, unit: "Sacos", status: "Alto" },
         { id: 2, name: "Glifosato 480", qtd: 5000, unit: "Litros", status: "Médio" },
-        { id: 3, name: "Semente Soja Intacta", qtd: 800, unit: "Sacos", status: "Baixo" },
-        { id: 4, name: "Freno 240", qtd: 2000, unit: "Litros", status: "Alto" },
-        { id: 5, name: "Arame Farpado", qtd: 0, unit: "Rolos", status: "Indisponível" }
+        { id: 3, name: "Semente Soja Intacta", qtd: 800, unit: "Sacos", status: "Baixo" }
     ];
 
-    // Filtro de Estoque
-    const filteredStock = matrizStock.filter(p => p.name.toLowerCase().includes(stockSearch.toLowerCase()));
+    // DADOS NOVOS: POSIÇÃO DE GRÃOS POR PRODUTOR (DA UNIDADE)
+    const producerGrainStocks = [
+        { id: 1, name: "João da Silva", soja: 5400, milho: 1200, trigo: 0, sobra: 12.5 }, // Sobra positiva é bom
+        { id: 2, name: "Agro Santos Ltda", soja: 12800, milho: 5000, trigo: 2000, sobra: 4.2 },
+        { id: 3, name: "Sítio Alvorada", soja: 2100, milho: 0, trigo: 0, sobra: -2.1 }, // Sobra negativa (Alerta)
+        { id: 4, name: "Fazenda Boa Vista", soja: 8500, milho: 3000, trigo: 1500, sobra: 8.0 },
+        { id: 5, name: "Cooperado Paulo", soja: 1500, milho: 0, trigo: 0, sobra: 15.0 }
+    ];
 
-    // FUNÇÃO DE BUSCA DE CLIENTE (HISTÓRICO 360)
-    const handleSearchClient = () => {
-        if (!searchTerm) return;
-        setSearchResult({
-            name: "João da Silva",
-            doc: "000.123.456-78",
-            score: "A (Excelente)",
-            last_purchase: "20/05/2025 (Ração)",
-            debt: "R$ 15.200 (A vencer)",
-            grain_balance: "5.400 sc Soja",
-            obs: "Cliente fidelizado. Potencial para venda futura."
-        });
-    };
+    // Cálculo dos Totais da Unidade
+    const totalSoja = producerGrainStocks.reduce((acc, curr) => acc + curr.soja, 0);
+    const totalMilho = producerGrainStocks.reduce((acc, curr) => acc + curr.milho, 0);
+    const mediaSobra = (producerGrainStocks.reduce((acc, curr) => acc + curr.sobra, 0) / producerGrainStocks.length).toFixed(2);
+
+    const filteredStock = matrizStock.filter(p => p.name.toLowerCase().includes(stockSearch.toLowerCase()));
+    const handleSearchClient = () => { if (!searchTerm) return; setSearchResult({ name: "João da Silva", doc: "000.123.456-78", score: "A", last_purchase: "20/05", debt: "R$ 15.200", grain_balance: "5.400 sc Soja", obs: "Cliente fidelizado." }); };
 
     return (
         <div className="space-y-6 animate-in fade-in">
-            {/* CABEÇALHO COM SELEÇÃO DE VISÃO */}
+            {/* CABEÇALHO */}
             <div className="flex flex-col gap-4">
                 <div className="flex justify-between items-center">
                     <div>
                         <h2 className="text-3xl font-bold text-white flex items-center gap-2"><Activity className="text-blue-400"/> Gestão Regional</h2>
-                        <p className="text-xs text-white/50">Unidade Visualizada: <strong className="text-white">{activeBranch}</strong></p>
+                        <p className="text-xs text-white/50">Unidade: <strong className="text-white">{activeBranch}</strong></p>
                     </div>
                     <div className="text-right hidden md:block">
-                        <p className="text-[10px] text-white/40 uppercase">Meta Mensal</p>
-                        <p className="text-2xl font-bold text-green-400">82% Atingida</p>
+                        <p className="text-[10px] text-white/40 uppercase">Faturamento Dia</p>
+                        <p className="text-2xl font-bold text-green-400">R$ 452.000</p>
                     </div>
                 </div>
                 
-                {/* MENU DE NAVEGAÇÃO ESTRATÉGICA */}
+                {/* MENU ESTRATÉGICO */}
                 <div className="flex gap-2 bg-black/20 p-1 rounded-xl overflow-x-auto no-scrollbar">
-                    {['dashboard', 'estoque_sede', 'clientes'].map(tab => (
-                        <button 
-                            key={tab} 
-                            onClick={() => setActiveTab(tab)} 
-                            className={`flex-1 px-4 py-2 rounded-lg text-xs font-bold uppercase transition whitespace-nowrap ${activeTab === tab ? 'bg-blue-600 text-white shadow-lg' : 'text-white/50 hover:text-white'}`}
-                        >
-                            {tab === 'dashboard' ? 'KPIs Gerais' : tab === 'estoque_sede' ? '🔍 Estoque Sede' : 'Consulta 360°'}
+                    {['dashboard', 'graos_unidade', 'estoque_sede', 'clientes'].map(tab => (
+                        <button key={tab} onClick={() => setActiveTab(tab)} className={`flex-1 px-4 py-2 rounded-lg text-xs font-bold uppercase transition whitespace-nowrap ${activeTab === tab ? 'bg-blue-600 text-white shadow-lg' : 'text-white/50 hover:text-white'}`}>
+                            {tab === 'dashboard' ? 'KPIs Gerais' : tab === 'graos_unidade' ? '🌾 Posição Grãos' : tab === 'estoque_sede' ? '🔍 Estoque Sede' : 'Consulta 360°'}
                         </button>
                     ))}
                 </div>
             </div>
 
-            {/* --- ABA 1: DASHBOARD (KPIS) --- */}
+            {/* --- ABA 1: DASHBOARD (Mantida) --- */}
             {activeTab === 'dashboard' && (
                 <>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <GlassCard className="cursor-pointer hover:bg-white/5 border-l-4 border-green-500" onClick={() => setView('estoque')}>
-                            <div className="flex justify-between items-start">
-                                <div><p className="text-white/60 text-xs font-bold">Estoque Local</p><h3 className="text-2xl font-black text-white">{branchData.stock}</h3></div>
-                                <Wheat className="text-green-400" size={24}/>
-                            </div>
+                            <div className="flex justify-between items-start"><div><p className="text-white/60 text-xs font-bold">Estoque Insumos</p><h3 className="text-2xl font-black text-white">{branchData.stock}</h3></div><Package className="text-green-400" size={24}/></div>
                             <div className="w-full bg-white/10 h-1.5 rounded-full mt-3"><div className="bg-green-500 h-full w-[75%]"/></div>
                         </GlassCard>
-
                         <GlassCard className="cursor-pointer hover:bg-white/5 border-l-4 border-blue-500" onClick={() => setView('financeiro')}>
-                            <div className="flex justify-between items-start">
-                                <div><p className="text-white/60 text-xs font-bold">Vendas (Dia)</p><h3 className="text-2xl font-black text-white">{branchData.sales}</h3></div>
-                                <ShoppingBag className="text-blue-400" size={24}/>
-                            </div>
+                            <div className="flex justify-between items-start"><div><p className="text-white/60 text-xs font-bold">Vendas (Dia)</p><h3 className="text-2xl font-black text-white">{branchData.sales}</h3></div><ShoppingBag className="text-blue-400" size={24}/></div>
                         </GlassCard>
-
                         <GlassCard className="cursor-pointer hover:bg-white/5 border-l-4 border-yellow-500" onClick={() => setView('logistica')}>
-                            <div className="flex justify-between items-start">
-                                <div><p className="text-white/60 text-xs font-bold">Pátio</p><h3 className="text-2xl font-black text-white">{branchData.trucks} Caminhões</h3></div>
-                                <Truck className="text-yellow-400" size={24}/>
-                            </div>
+                            <div className="flex justify-between items-start"><div><p className="text-white/60 text-xs font-bold">Pátio</p><h3 className="text-2xl font-black text-white">{branchData.trucks} Caminhões</h3></div><Truck className="text-yellow-400" size={24}/></div>
                         </GlassCard>
                     </div>
-
-                    {/* FERRAMENTAS RÁPIDAS */}
                     <h3 className="font-bold text-white mt-4 mb-2">Ferramentas de Gestão</h3>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                        <button onClick={() => setView('price_update')} className="p-3 bg-white/5 border border-white/10 rounded-xl flex flex-col items-center gap-2 hover:bg-white/10 transition">
-                            <FileUp className="text-purple-400"/> <span className="text-xs text-white">Tabela Preços</span>
-                        </button>
-                        <button onClick={() => setView('trading')} className="p-3 bg-white/5 border border-white/10 rounded-xl flex flex-col items-center gap-2 hover:bg-white/10 transition">
-                            <Gavel className="text-amber-400"/> <span className="text-xs text-white">Mesa Grãos</span>
-                        </button>
-                        <button onClick={() => setView('relatorios')} className="p-3 bg-white/5 border border-white/10 rounded-xl flex flex-col items-center gap-2 hover:bg-white/10 transition">
-                            <FileBarChart className="text-cyan-400"/> <span className="text-xs text-white">Relatórios</span>
-                        </button>
-                        <button onClick={() => setView('admin_finance')} className="p-3 bg-white/5 border border-white/10 rounded-xl flex flex-col items-center gap-2 hover:bg-white/10 transition">
-                            <PieChart className="text-emerald-400"/> <span className="text-xs text-white">DRE Gerencial</span>
-                        </button>
+                        <button onClick={() => setView('price_update')} className="p-3 bg-white/5 border border-white/10 rounded-xl flex flex-col items-center gap-2 hover:bg-white/10 transition"><FileUp className="text-purple-400"/> <span className="text-xs text-white">Tabela Preços</span></button>
+                        <button onClick={() => setView('trading')} className="p-3 bg-white/5 border border-white/10 rounded-xl flex flex-col items-center gap-2 hover:bg-white/10 transition"><Gavel className="text-amber-400"/> <span className="text-xs text-white">Mesa Grãos</span></button>
+                        <button onClick={() => setView('relatorios')} className="p-3 bg-white/5 border border-white/10 rounded-xl flex flex-col items-center gap-2 hover:bg-white/10 transition"><FileBarChart className="text-cyan-400"/> <span className="text-xs text-white">Relatórios</span></button>
+                        <button onClick={() => setView('admin_finance')} className="p-3 bg-white/5 border border-white/10 rounded-xl flex flex-col items-center gap-2 hover:bg-white/10 transition"><PieChart className="text-emerald-400"/> <span className="text-xs text-white">DRE Gerencial</span></button>
                     </div>
                 </>
             )}
 
-            {/* --- ABA 2: BUSCA RÁPIDA ESTOQUE SEDE (NOVIDADE) --- */}
-            {activeTab === 'estoque_sede' && (
-                <div className="space-y-4">
-                    <div className="bg-blue-900/20 border border-blue-500/30 p-4 rounded-2xl">
-                        <h3 className="font-bold text-white mb-1 flex items-center gap-2"><Package size={18}/> Consulta Matriz (Ibirubá)</h3>
-                        <p className="text-xs text-white/60 mb-3">Verifique a disponibilidade antes de solicitar transferência.</p>
-                        
-                        <div className="relative">
-                            <input 
-                                value={stockSearch}
-                                onChange={(e) => setStockSearch(e.target.value)}
-                                placeholder="Digite o nome do produto..."
-                                className="w-full bg-black/30 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white focus:outline-none focus:border-blue-500 transition text-sm"
-                            />
-                            <Search className="absolute left-3 top-3.5 text-white/40" size={16}/>
-                        </div>
+            {/* --- ABA 2: POSIÇÃO DE GRÃOS (NOVA E DETALHADA) --- */}
+            {activeTab === 'graos_unidade' && (
+                <div className="space-y-6 animate-in fade-in">
+                    {/* CARDS DE TOTAIS DA UNIDADE */}
+                    <div className="grid grid-cols-3 gap-3">
+                        <GlassCard className="p-3 bg-yellow-900/20 border-yellow-500/30 text-center">
+                            <p className="text-[10px] text-white/50 uppercase font-bold">Total Soja</p>
+                            <p className="text-xl font-black text-yellow-400">{totalSoja.toLocaleString()} <span className="text-[10px]">sc</span></p>
+                        </GlassCard>
+                        <GlassCard className="p-3 bg-orange-900/20 border-orange-500/30 text-center">
+                            <p className="text-[10px] text-white/50 uppercase font-bold">Total Milho</p>
+                            <p className="text-xl font-black text-orange-400">{totalMilho.toLocaleString()} <span className="text-[10px]">sc</span></p>
+                        </GlassCard>
+                        <GlassCard className="p-3 bg-blue-900/20 border-blue-500/30 text-center">
+                            <p className="text-[10px] text-white/50 uppercase font-bold">Sobra Média</p>
+                            <p className={`text-xl font-black ${mediaSobra >= 0 ? 'text-green-400' : 'text-red-400'}`}>{mediaSobra}%</p>
+                        </GlassCard>
                     </div>
 
-                    <div className="grid grid-cols-1 gap-2">
-                        {filteredStock.map(item => (
-                            <GlassCard key={item.id} className="p-3 flex justify-between items-center hover:bg-white/5">
-                                <div>
-                                    <h4 className="font-bold text-white text-sm">{item.name}</h4>
-                                    <p className="text-[10px] text-white/50">Unidade: {item.unit}</p>
+                    {/* LISTA DETALHADA POR PRODUTOR */}
+                    <div>
+                        <div className="flex justify-between items-center mb-3">
+                            <h3 className="font-bold text-white">Estoque por Cooperado</h3>
+                            <button className="text-xs text-blue-400 flex items-center gap-1"><Download size={14}/> Exportar</button>
+                        </div>
+                        <div className="space-y-2">
+                            {/* Cabeçalho da Tabela */}
+                            <div className="grid grid-cols-12 text-[10px] text-white/40 px-4 uppercase font-bold">
+                                <div className="col-span-5">Produtor</div>
+                                <div className="col-span-3 text-center">Soja</div>
+                                <div className="col-span-3 text-center">Milho</div>
+                                <div className="col-span-1 text-right">Sobra</div>
+                            </div>
+
+                            {producerGrainStocks.map(p => (
+                                <div key={p.id} className="bg-white/5 p-3 rounded-xl border border-white/5 grid grid-cols-12 items-center hover:bg-white/10 transition">
+                                    <div className="col-span-5">
+                                        <p className="text-sm font-bold text-white truncate">{p.name}</p>
+                                    </div>
+                                    <div className="col-span-3 text-center">
+                                        <p className="text-xs text-yellow-200 font-mono">{p.soja.toLocaleString()}</p>
+                                    </div>
+                                    <div className="col-span-3 text-center">
+                                        <p className="text-xs text-orange-200 font-mono">{p.milho > 0 ? p.milho.toLocaleString() : '-'}</p>
+                                    </div>
+                                    <div className="col-span-1 text-right">
+                                        <span className={`text-[10px] font-bold ${p.sobra < 0 ? 'text-red-400' : 'text-green-400'}`}>
+                                            {p.sobra > 0 ? '+' : ''}{p.sobra}%
+                                        </span>
+                                    </div>
                                 </div>
-                                <div className="text-right">
-                                    <p className="font-bold text-white text-lg">{item.qtd.toLocaleString()}</p>
-                                    <span className={`text-[9px] px-2 py-0.5 rounded uppercase font-bold ${item.status === 'Indisponível' ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400'}`}>
-                                        {item.status}
-                                    </span>
-                                </div>
-                            </GlassCard>
-                        ))}
-                        {filteredStock.length === 0 && <p className="text-center text-white/30 text-xs py-4">Nenhum produto encontrado.</p>}
+                            ))}
+                        </div>
                     </div>
                 </div>
             )}
 
-            {/* --- ABA 3: CONSULTA 360 (HISTÓRICO) --- */}
+            {/* --- ABA 3: ESTOQUE SEDE --- */}
+            {activeTab === 'estoque_sede' && (
+                <div className="space-y-4">
+                    <div className="bg-blue-900/20 border border-blue-500/30 p-4 rounded-2xl">
+                        <h3 className="font-bold text-white mb-1 flex items-center gap-2"><Package size={18}/> Consulta Matriz</h3>
+                        <div className="relative mt-3"><input value={stockSearch} onChange={(e) => setStockSearch(e.target.value)} placeholder="Buscar produto..." className="w-full bg-black/30 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white focus:outline-none text-sm"/><Search className="absolute left-3 top-3.5 text-white/40" size={16}/></div>
+                    </div>
+                    <div className="grid grid-cols-1 gap-2">
+                        {filteredStock.map(item => (<GlassCard key={item.id} className="p-3 flex justify-between items-center hover:bg-white/5"><div><h4 className="font-bold text-white text-sm">{item.name}</h4><p className="text-[10px] text-white/50">Unidade: {item.unit}</p></div><div className="text-right"><p className="font-bold text-white text-lg">{item.qtd.toLocaleString()}</p><span className={`text-[9px] px-2 py-0.5 rounded uppercase font-bold ${item.status === 'Indisponível' ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400'}`}>{item.status}</span></div></GlassCard>))}
+                    </div>
+                </div>
+            )}
+
+            {/* --- ABA 4: CONSULTA 360 --- */}
             {activeTab === 'clientes' && (
                 <div className="space-y-4">
-                    <div className="relative">
-                        <input 
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            placeholder="Buscar Produtor (Nome ou CPF)..."
-                            className="w-full bg-black/30 border border-white/10 rounded-2xl pl-12 pr-4 py-4 text-white focus:outline-none focus:border-blue-500 transition"
-                        />
-                        <Search className="absolute left-4 top-4 text-white/40"/>
-                        <button onClick={handleSearchClient} className="absolute right-2 top-2 bg-blue-600 p-2 rounded-xl text-white hover:bg-blue-500"><ArrowRight size={20}/></button>
-                    </div>
-
-                    {searchResult && (
-                        <GlassCard className="border-t-4 border-green-500 animate-in slide-in-from-bottom-4">
-                            <div className="flex justify-between items-start mb-4">
-                                <div>
-                                    <h3 className="text-2xl font-bold text-white">{searchResult.name}</h3>
-                                    <p className="text-xs text-white/50">CPF: {searchResult.doc}</p>
-                                </div>
-                                <span className="bg-green-500/20 text-green-400 px-3 py-1 rounded-full text-xs font-bold border border-green-500/30">{searchResult.score}</span>
-                            </div>
-                            
-                            <div className="grid grid-cols-2 gap-4 text-sm mb-4">
-                                <div className="bg-white/5 p-3 rounded-xl">
-                                    <p className="text-white/40 text-xs">Saldo Devedor</p>
-                                    <p className="text-red-400 font-bold">{searchResult.debt}</p>
-                                </div>
-                                <div className="bg-white/5 p-3 rounded-xl">
-                                    <p className="text-white/40 text-xs">Saldo Grãos</p>
-                                    <p className="text-yellow-400 font-bold">{searchResult.grain_balance}</p>
-                                </div>
-                            </div>
-                            
-                            <p className="text-xs text-white/60 italic border-t border-white/10 pt-2">Obs: {searchResult.obs}</p>
-                            
-                            <div className="mt-4 grid grid-cols-2 gap-2">
-                                <button className="py-2 bg-white/10 rounded-lg text-xs text-white hover:bg-white/20">Ver Extrato</button>
-                                <button className="py-2 bg-white/10 rounded-lg text-xs text-white hover:bg-white/20">Histórico Notas</button>
-                            </div>
-                        </GlassCard>
-                    )}
+                    <div className="relative"><input value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Buscar Produtor..." className="w-full bg-black/30 border border-white/10 rounded-2xl pl-12 pr-4 py-4 text-white focus:outline-none"/><Search className="absolute left-4 top-4 text-white/40"/><button onClick={handleSearchClient} className="absolute right-2 top-2 bg-blue-600 p-2 rounded-xl text-white"><ArrowRight size={20}/></button></div>
+                    {searchResult && (<GlassCard className="border-t-4 border-green-500 animate-in fade-in"><div className="flex justify-between"><h3 className="font-bold text-white">{searchResult.name}</h3><span className="bg-green-500/20 text-green-400 text-xs px-2 rounded">{searchResult.score}</span></div><div className="grid grid-cols-2 gap-4 mt-4 text-xs"><div><p className="text-white/40">Dívida</p><p className="text-red-400 font-bold">{searchResult.debt}</p></div><div><p className="text-white/40">Saldo Grãos</p><p className="text-yellow-400 font-bold">{searchResult.grain_balance}</p></div></div><p className="text-xs text-white/60 italic border-t border-white/10 pt-2 mt-2">Obs: {searchResult.obs}</p></GlassCard>)}
                 </div>
             )}
         </div>
