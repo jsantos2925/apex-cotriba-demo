@@ -1,16 +1,19 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { Picker } from '@react-native-picker/picker';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, Modal } from 'react-native';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInWithCustomToken, signOut, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 import { getFirestore, collection, onSnapshot, query, orderBy, limit, addDoc, serverTimestamp } from 'firebase/firestore';
 import { 
-    Home, Package, MessageCircle, Wallet, User, LogOut, Loader, Camera, Send, 
-    AlertTriangle, MapPin, Search, ShieldCheck, ShoppingCart, FileText, Truck, Cloud,
-    CreditCard, Wind, Droplets, CheckCircle, Tractor, Sprout, Clock, Trash2, Menu, Play, Pause, Paperclip, 
-    BarChart3, Activity, ShoppingBag, Megaphone, ArrowRightLeft, Filter, Mic, Video, Image as ImageIcon,
-    Lock, Mail, FileSignature, QrCode, Gavel, Scale, ScanEye, Users, Siren, PieChart, LineChart,
-    Hash, Download, BoxSelect, Wrench, Split, Landmark, FileUp, RefreshCw, Check, Newspaper, 
-    Bell, Database, Layers, Coffee, Wheat, ChevronDown, Smartphone, UserCheck, PlusCircle,Gauge, Signal, Fuel, Map, 
-    LockKeyhole, Pill, Banknote, Milk, Users2, HardHat, ScanFace, ShieldAlert, MessageSquare, Navigation, FileBarChart, PackageCheck, History, AlertCircle, Calendar, Briefcase, Sparkles, ArrowRight, X
+  // Ícones Consolidados
+  Home, Package, MessageCircle, Wallet, User, LogOut, Loader, Camera, Send, Leaf, Building2, 
+  AlertTriangle, MapPin, Search, ShieldCheck, ShoppingCart, FileText, Truck, Cloud,
+  CreditCard, Wind, Droplets, CheckCircle, Tractor, Sprout, Clock, Trash2, Menu, Play, Pause, Paperclip, 
+  BarChart3, Activity, ShoppingBag, Megaphone, ArrowRightLeft, Filter, Mic, Video, Image as ImageIcon,
+  Lock, Mail, FileSignature, QrCode, Gavel, Scale, ScanEye, Users, Siren, PieChart, LineChart,
+  Hash, Download, BoxSelect, Wrench, Split, Landmark, FileUp, RefreshCw, Check, Newspaper, ChevronRight, LayoutGrid, Globe2, 
+  Bell, Database, Layers, Coffee, Wheat, ChevronDown, Smartphone, UserCheck, PlusCircle, Gauge, Signal, Fuel, Map, 
+  LockKeyhole, Pill, Banknote, Milk, Users2, HardHat, ShieldAlert, MessageSquare, Navigation, FileBarChart, PackageCheck, History, AlertCircle, Calendar, Briefcase, Sparkles, ArrowRight, X, Repeat
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { twMerge } from 'tailwind-merge';
@@ -1989,6 +1992,234 @@ const OperatorHome = ({ setView }) => (<div className="grid grid-cols-1 gap-6 an
 const EstoquistaDashboard = ({ setView }) => (<div className="grid grid-cols-1 gap-6 animate-in fade-in"><GlassCard className="col-span-full border-l-4 border-green-500 text-center py-12 cursor-pointer hover:bg-white/5" onClick={()=>setView('estoque')}><Camera size={48} className="mx-auto mb-4 text-green-400"/><h3 className="text-2xl font-bold text-white">Escanear Entrada</h3></GlassCard></div>);
 
 // TELA INICIAL DO PRODUTOR
+
+// --- INICIO DO COMPONENTE CALCULADORA ---
+const CalculadoraRoiCotriba = ({ visivel, fechar }) => {
+  const [loteQtd, setLoteQtd] = useState('200');
+  const [pesoAtual, setPesoAtual] = useState('180');
+  const [pesoMeta, setPesoMeta] = useState('');
+  const [racaoSelecionada, setRacaoSelecionada] = useState('dieta_total');
+  const [suplementoSelecionado, setSuplementoSelecionado] = useState('nenhum');
+  const [resultado, setResultado] = useState(null);
+
+  const RACOES = {
+    'dieta_total': { nome: 'Dieta Total', gmd: 1.6 },
+    'destete_18': { nome: 'Destete 18%', gmd: 0.9 },
+    'bovino_140': { nome: 'Bovino de Corte 140', gmd: 1.2 },
+  };
+
+  const SUPLEMENTOS = {
+    'nenhum': { nome: 'Sem Suplemento', gmdExtra: 0 },
+    'invernada_30': { nome: 'Invernada 30 Pro', gmdExtra: 0.25 },
+    'tradicao_40': { nome: 'Tradição 40', gmdExtra: 0.35 },
+    'tradicao_60': { nome: 'Tradição 60', gmdExtra: 0.45 },
+    'invernada_azevem': { nome: 'Invernada Azevém', gmdExtra: 0.30 },
+  };
+
+  const calcular = () => {
+    const atual = parseFloat(pesoAtual);
+    const meta = parseFloat(pesoMeta);
+    const qtd = parseInt(loteQtd);
+    if (!meta || meta <= atual) { Alert.alert("Atenção", "A meta deve ser maior que o peso atual."); return; }
+    
+    const r = RACOES[racaoSelecionada];
+    const s = SUPLEMENTOS[suplementoSelecionado];
+    const gmdTotal = r.gmd + s.gmdExtra;
+    const dias = Math.ceil((meta - atual) / gmdTotal);
+    const sacas = Math.ceil((dias * 8 * qtd) / 60); // Estimativa simplificada
+
+    setResultado({ dias, gmdTotal: gmdTotal.toFixed(2), sacas });
+  };
+
+  return (
+    <Modal visible={visivel} animationType="slide" transparent={false}>
+      <ScrollView style={{padding: 20, backgroundColor: '#F5F7FA'}}>
+        <Text style={{fontSize: 22, fontWeight: 'bold', marginBottom: 20, color: '#004d40'}}>📊 Simulador de ROI</Text>
+        
+        <Text style={{fontWeight:'bold'}}>Quantas Cabeças?</Text>
+        <TextInput style={estilosCalc.input} keyboardType="numeric" value={loteQtd} onChangeText={setLoteQtd} />
+
+        <View style={{flexDirection:'row', justifyContent:'space-between'}}>
+            <View style={{width:'48%'}}>
+                <Text style={{fontWeight:'bold'}}>Peso Atual (kg)</Text>
+                <TextInput style={estilosCalc.input} keyboardType="numeric" value={pesoAtual} onChangeText={setPesoAtual} />
+            </View>
+            <View style={{width:'48%'}}>
+                <Text style={{fontWeight:'bold'}}>Meta (kg)</Text>
+                <TextInput style={estilosCalc.input} keyboardType="numeric" value={pesoMeta} onChangeText={setPesoMeta} placeholder="Ex: 450"/>
+            </View>
+        </View>
+
+        <Text style={{fontWeight:'bold', marginTop: 10}}>Ração Cotribá:</Text>
+        <View style={estilosCalc.pickerBox}>
+            <Picker selectedValue={racaoSelecionada} onValueChange={setRacaoSelecionada}>
+            {Object.keys(RACOES).map(k => <Picker.Item key={k} label={RACOES[k].nome} value={k} />)}
+            </Picker>
+        </View>
+
+        <Text style={{fontWeight:'bold', marginTop: 10}}>Suplemento:</Text>
+        <View style={estilosCalc.pickerBox}>
+            <Picker selectedValue={suplementoSelecionado} onValueChange={setSuplementoSelecionado}>
+            {Object.keys(SUPLEMENTOS).map(k => <Picker.Item key={k} label={SUPLEMENTOS[k].nome} value={k} />)}
+            </Picker>
+        </View>
+
+        <TouchableOpacity onPress={calcular} style={estilosCalc.btnCalc}>
+            <Text style={{color:'#FFF', fontWeight:'bold'}}>CALCULAR GANHO</Text>
+        </TouchableOpacity>
+
+        {resultado && (
+            <View style={estilosCalc.resBox}>
+                <Text style={{fontSize:18, fontWeight:'bold', color:'#004d40'}}>Resultado Previsto:</Text>
+                <Text>Tempo: {resultado.dias} dias</Text>
+                <Text>GMD: {resultado.gmdTotal} kg/dia</Text>
+                <Text style={{marginTop:10, fontWeight:'bold'}}>Consumo Estimado: {resultado.sacas} sacas</Text>
+            </View>
+        )}
+
+        <TouchableOpacity onPress={fechar} style={estilosCalc.btnClose}>
+            <Text style={{color:'#d32f2f'}}>Fechar Simulador</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </Modal>
+  );
+};
+
+const estilosCalc = StyleSheet.create({
+  input: { backgroundColor:'#FFF', borderWidth:1, borderColor:'#CCC', padding:10, borderRadius:5, marginBottom:10 },
+  pickerBox: { borderWidth:1, borderColor:'#CCC', borderRadius:5, marginBottom:10, backgroundColor:'#FFF' },
+  btnCalc: { backgroundColor:'#004d40', padding:15, borderRadius:5, alignItems:'center', marginTop:10 },
+  resBox: { backgroundColor:'#e0f2f1', padding:15, borderRadius:5, marginTop:20, borderWidth:1, borderColor:'#004d40' },
+  btnClose: { marginTop:30, alignItems:'center', padding:20 }
+});
+// --- FIM DO COMPONENTE CALCULADORA ---
+
+
+// --- NOVO: MÓDULO AGRICULTURA DE PRECISÃO ---
+const PrecisionAgView = () => {
+    const [layer, setLayer] = useState('ndvi'); // ndvi, solo, colheita
+    return (
+        <div className="space-y-6 animate-in fade-in">
+            <div className="flex justify-between items-center">
+                <h2 className="text-3xl font-bold text-white flex items-center gap-2"><Layers className="text-emerald-400"/> Agricultura de Precisão</h2>
+                <div className="flex gap-2 bg-black/30 p-1 rounded-lg">
+                    <button onClick={()=>setLayer('ndvi')} className={`px-3 py-1 text-xs font-bold rounded ${layer==='ndvi'?'bg-emerald-500 text-black':'text-white/50'}`}>NDVI (Vigor)</button>
+                    <button onClick={()=>setLayer('solo')} className={`px-3 py-1 text-xs font-bold rounded ${layer==='solo'?'bg-amber-500 text-black':'text-white/50'}`}>Análise Solo</button>
+                </div>
+            </div>
+
+            {/* MAPA INTERATIVO (SIMULADO) */}
+            <GlassCard className="h-[400px] relative overflow-hidden border-t-4 border-emerald-500 p-0 group">
+                <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1500382017468-9049fed747ef?q=80&w=1000')] bg-cover opacity-40 grayscale group-hover:grayscale-0 transition duration-700"></div>
+                {/* Sobreposição de Mapa de Calor */}
+                <div className={`absolute inset-0 opacity-60 mix-blend-overlay transition-all duration-1000 ${layer === 'ndvi' ? 'bg-gradient-to-tr from-red-500 via-yellow-500 to-green-600' : 'bg-gradient-to-bl from-amber-900 via-amber-600 to-yellow-200'}`}></div>
+                
+                <div className="absolute top-4 left-4 bg-black/60 backdrop-blur-md p-4 rounded-xl border border-white/10">
+                    <h3 className="text-white font-bold">Talhão 04 - Soja</h3>
+                    <p className="text-xs text-white/70">Área: 140 Hectares</p>
+                    <div className="mt-3 space-y-1">
+                        <div className="flex items-center gap-2 text-xs text-green-400"><div className="w-3 h-3 bg-green-500 rounded-full"/> Alto Vigor (85%)</div>
+                        <div className="flex items-center gap-2 text-xs text-yellow-400"><div className="w-3 h-3 bg-yellow-500 rounded-full"/> Médio (10%)</div>
+                        <div className="flex items-center gap-2 text-xs text-red-400"><div className="w-3 h-3 bg-red-500 rounded-full"/> Atenção (5%)</div>
+                    </div>
+                </div>
+                <div className="absolute bottom-4 right-4">
+                    <NeonButton className="text-xs h-8">Gerar Prescrição (Taxa Variável)</NeonButton>
+                </div>
+            </GlassCard>
+
+            {/* GRID DE DADOS */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <GlassCard className="text-center">
+                    <p className="text-xs text-white/50 uppercase">Média NDVI</p>
+                    <p className="text-3xl font-black text-green-400">0.78</p>
+                </GlassCard>
+                <GlassCard className="text-center">
+                    <p className="text-xs text-white/50 uppercase">Umidade Solo</p>
+                    <p className="text-3xl font-black text-blue-400">22%</p>
+                </GlassCard>
+                <GlassCard className="text-center">
+                    <p className="text-xs text-white/50 uppercase">Compactação</p>
+                    <p className="text-3xl font-black text-yellow-400">Baixa</p>
+                </GlassCard>
+            </div>
+        </div>
+    );
+};
+
+// --- NOVO: MÓDULO PECUÁRIA DE CORTE ---
+// LINHA 2150 EM DIANTE...
+
+// --- NOVO: MÓDULO PECUÁRIA DE CORTE ---
+const CattleView = () => { // <--- MUDA AQUI: Troquei o "(" por "{"
+  // Agora você pode declarar a variável
+  const [mostrarCalculadora, setMostrarCalculadora] = useState(false);
+
+  return (
+       <div className="space-y-6 animate-in fade-in">
+         <h2 className="text-3xl font-bold text-white flex items-center gap-2"><Activity className="text-red-400"/> Pecuária de Corte (GMD)</h2>
+         
+         {/* ... O RESTO DO SEU CÓDIGO CONTINUA IGUAL ... */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <GlassCard className="border-l-4 border-red-500">
+                <h3 className="text-white font-bold">Rebanho Total</h3>
+                <p className="text-4xl font-black text-white mt-2">450 <span className="text-lg font-normal opacity-50">cb</span></p>
+                <p className="text-xs text-white/50">Lote Engorda: 120 cb</p>             
+
+{/* --- BOTÃO PARA ABRIR A CALCULADORA --- */}
+<TouchableOpacity 
+  onPress={() => setMostrarCalculadora(true)} 
+  style={{backgroundColor: '#00695c', padding: 15, borderRadius: 10, marginVertical: 10, alignItems: 'center'}}>
+    <Text style={{color: '#FFF', fontWeight: 'bold'}}>📈 ABRIR SIMULADOR DE GANHO DE PESO</Text>
+</TouchableOpacity>
+
+{/* --- O COMPONENTE INVISÍVEL (SÓ ABRE QUANDO CLICA) --- */}
+<CalculadoraRoiCotriba 
+  visivel={mostrarCalculadora} 
+  fechar={() => setMostrarCalculadora(false)} 
+/>
+
+            </GlassCard>
+            <GlassCard className="border-l-4 border-green-500">
+                <h3 className="text-white font-bold">GMD (Ganho Médio)</h3>
+                <p className="text-4xl font-black text-green-400 mt-2">1.45 <span className="text-lg font-normal opacity-50">kg/dia</span></p>
+                <p className="text-xs text-white/50">Meta: 1.50 kg/dia</p>
+            </GlassCard>
+            <GlassCard className="border-l-4 border-blue-500">
+                <h3 className="text-white font-bold">Próxima Pesagem</h3>
+                <p className="text-4xl font-black text-white mt-2">05 <span className="text-lg font-normal opacity-50">dias</span></p>
+                <p className="text-xs text-white/50">Curral 02</p>
+            </GlassCard>
+        </div>
+
+        <GlassCard>
+            <h3 className="font-bold text-white mb-4 flex gap-2 items-center"><AlertTriangle size={18} className="text-yellow-400"/> Alertas Sanitários</h3>
+            <div className="space-y-3">
+                <div className="bg-white/5 p-3 rounded-xl flex justify-between items-center border border-white/10">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-red-500/20 rounded-full text-red-400"><Activity size={16}/></div>
+                        <div>
+                            <p className="text-sm font-bold text-white">Vacinação Aftosa (Oficial)</p>
+                            <p className="text-xs text-white/50">Vence em 15 dias</p>
+                        </div>
+                    </div>
+                    <button className="text-xs bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded-lg font-bold">Comprar Vacina</button>
+                </div>
+                <div className="bg-white/5 p-3 rounded-xl flex justify-between items-center border border-white/10">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-blue-500/20 rounded-full text-blue-400"><Droplets size={16}/></div>
+                        <div>
+                            <p className="text-sm font-bold text-white">Vermifugação Lote 03</p>
+                            <p className="text-xs text-white/50">Sugerido pelo Veterinário</p>
+                        </div>
+                    </div>
+                    <button className="text-xs border border-white/20 text-white px-3 py-1.5 rounded-lg hover:bg-white/10">Agendar</button>
+                </div>
+            </div>
+        </GlassCard>
+    </div>
+  );
+}
 const ProducerHome = ({ setView }) => (
     <div className="space-y-6 animate-in fade-in">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -2007,11 +2238,17 @@ const ProducerHome = ({ setView }) => (
                 <Tractor size={64} className="opacity-20 text-white"/>
             </GlassCard>
 
-            <div className="col-span-full grid grid-cols-2 md:grid-cols-4 gap-4">
-                <button onClick={() => setView('chat')} className="p-6 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/5 flex flex-col items-center gap-2 text-white"><MessageCircle/><span className="text-xs">Consultor</span></button>
-                <button onClick={() => setView('agrilens')} className="p-6 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/5 flex flex-col items-center gap-2 text-white"><ScanEye/><span className="text-xs">AgriLens</span></button>
-                <button onClick={() => setView('pool')} className="p-6 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/5 flex flex-col items-center gap-2 text-white"><Users/><span className="text-xs">Pool</span></button>
-                <button onClick={() => setView('marketplace')} className="p-6 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/5 flex flex-col items-center gap-2 text-white"><ShoppingBag/><span className="text-xs">Loja</span></button>
+            {/* GRADE DE ATALHOS ATUALIZADA */}
+            <div className="col-span-full grid grid-cols-3 md:grid-cols-6 gap-3">
+                <button onClick={() => setView('chat')} className="p-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/5 flex flex-col items-center gap-2 text-white transition hover:-translate-y-1"><MessageCircle size={20}/><span className="text-[10px] uppercase font-bold">Consultor</span></button>
+                <button onClick={() => setView('agrilens')} className="p-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/5 flex flex-col items-center gap-2 text-white transition hover:-translate-y-1"><ScanEye size={20}/><span className="text-[10px] uppercase font-bold">AgriLens</span></button>
+                
+                {/* NOVOS BOTÕES AQUI */}
+                <button onClick={() => setView('precision')} className="p-4 rounded-2xl bg-emerald-900/20 hover:bg-emerald-900/40 border border-emerald-500/30 flex flex-col items-center gap-2 text-emerald-400 transition hover:-translate-y-1"><Layers size={20}/><span className="text-[10px] uppercase font-bold">Precisão</span></button>
+                <button onClick={() => setView('cattle')} className="p-4 rounded-2xl bg-red-900/20 hover:bg-red-900/40 border border-red-500/30 flex flex-col items-center gap-2 text-red-400 transition hover:-translate-y-1"><Activity size={20}/><span className="text-[10px] uppercase font-bold">Pecuária</span></button>
+                
+                <button onClick={() => setView('pool')} className="p-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/5 flex flex-col items-center gap-2 text-white transition hover:-translate-y-1"><Users size={20}/><span className="text-[10px] uppercase font-bold">Pool</span></button>
+                <button onClick={() => setView('marketplace')} className="p-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/5 flex flex-col items-center gap-2 text-white transition hover:-translate-y-1"><ShoppingBag size={20}/><span className="text-[10px] uppercase font-bold">Loja</span></button>
             </div>
         </div>
     </div>
@@ -2042,36 +2279,6 @@ const SwitchTenantWidget = ({ currentTenant, onSwitch }) => {
     return (<GlassCard className="cursor-pointer hover:bg-white/10 border-dashed border-white/30" onClick={() => onSwitch(otherTenant)}><div className="flex items-center gap-4"><div className="p-3 bg-white/10 rounded-full"><Repeat size={24}/></div><div><h4 className="font-bold text-lg">Acessar {tenants[otherTenant].name}</h4><p className="text-xs text-white/50">Trocar de conta cooperativa</p></div><OtherLogo className="ml-auto opacity-50" size={32}/></div></GlassCard>);
 };
 
-const LoginScreen = ({ onLogin, loading, error }) => {
-    const [email, setEmail] = useState(''); const [pass, setPass] = useState(''); const [isRegistering, setIsRegistering] = useState(false);
-    const handleSubmit = (e) => { e.preventDefault(); onLogin(email, pass, isRegistering); };
-    const quickLogin = (e, roleEmail) => { e.preventDefault(); onLogin(roleEmail, '123456'); };
-
-    return (
-        <div className="min-h-screen flex items-center justify-center bg-[#003B71] relative overflow-hidden">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_var(--tw-gradient-stops))] from-yellow-500/20 via-[#003B71] to-[#003B71]"/>
-            <GlassCard className="w-full max-w-sm p-8 relative z-10 border-yellow-500/30">
-                <div className="text-center mb-8"><div className="inline-flex p-4 bg-white/10 rounded-full mb-4 text-yellow-400 shadow-lg"><Wheat size={48}/></div><h1 className="text-4xl font-black text-white tracking-tighter">Cotribá <span className="text-yellow-400">Digital</span></h1><p className="text-white/60 text-sm mt-2">Acesso Corporativo</p></div>
-                <form onSubmit={handleSubmit} className="space-y-4"><GlassInput label="Email" icon={Mail} value={email} onChange={e=>setEmail(e.target.value)} placeholder="seu@email.com"/><GlassInput label="Senha" icon={Lock} type="password" value={pass} onChange={e=>setPass(e.target.value)} placeholder="••••••"/>
-                {error && <div className="text-red-400 text-xs bg-red-500/10 p-2 rounded">{String(error)}</div>}
-                <NeonButton className="w-full" disabled={loading}>{loading ? 'Entrando...' : 'Acessar'}</NeonButton></form>
-                <div className="mt-6 pt-4 border-t border-white/10"><p className="text-[10px] text-white/30 text-center mb-2 uppercase tracking-widest">Acesso Rápido (Demo)</p><div className="grid grid-cols-3 gap-2">
-                    <button onClick={(e)=>quickLogin(e, 'everton@cotriba.com')} className="text-[10px] bg-purple-900/50 p-2 rounded text-purple-200 border border-purple-500/30 hover:bg-purple-800 transition">1. Everton</button>
-                    <button onClick={(e)=>quickLogin(e, 'ricardo@cotriba.com')} className="text-[10px] bg-blue-900/50 p-2 rounded text-blue-200 border border-blue-500/30 hover:bg-blue-800 transition">2. Ricardo</button>
-                    <button onClick={(e)=>quickLogin(e, 'operador@cotriba.com')} className="text-[10px] bg-orange-900/50 p-2 rounded text-orange-200 border border-orange-500/30 hover:bg-orange-800 transition">3. Operador</button>
-                    <button onClick={(e)=>quickLogin(e, 'produtor@cotriba.com')} className="text-[10px] bg-green-900/50 p-2 rounded text-green-200 border border-green-500/30 hover:bg-green-800 transition">4. Produtor</button>
-                    <button onClick={(e)=>quickLogin(e, 'estoquista@cotriba.com')} className="text-[10px] bg-cyan-900/50 p-2 rounded text-cyan-200 border border-cyan-500/30 hover:bg-cyan-800 transition">5. Estoque</button>
-                    <button onClick={(e)=>quickLogin(e, 'agronomo@cotriba.com')} className="text-[10px] bg-teal-900/50 p-2 rounded text-teal-200 border border-teal-500/30 hover:bg-teal-800 transition">6. Agrônomo</button>
-                    <button onClick={(e)=>quickLogin(e, 'nutri@cotriba.com')} className="text-[10px] bg-pink-900/50 p-2 rounded text-pink-200 border border-pink-500/30 hover:bg-pink-800 transition">7. Nutrição</button>
-                    <button onClick={(e)=>quickLogin(e, 'adm@cotriba.com')} className="text-[10px] bg-gray-700 p-2 rounded text-gray-200 border border-gray-500 transition">8. Admin</button>
-                    <button onClick={(e)=>quickLogin(e, 'motorista@cotriba.com')} className="text-[10px] bg-red-900/50 p-2 rounded text-red-200 border border-red-500/30 hover:bg-red-800 transition">9. Motorista</button>
-                    <button onClick={(e)=>quickLogin(e, 'seguranca@cotriba.com')} className="text-[10px] bg-yellow-900/50 p-2 rounded text-yellow-200 border border-yellow-500/30 hover:bg-yellow-800 transition">10. Segurança</button>
-                    <button onClick={(e)=>quickLogin(e, 'supervisor@cotriba.com')} className="text-[10px] bg-indigo-900/50 p-2 rounded text-indigo-200 border border-indigo-500/30 hover:bg-indigo-800 transition">11. Supervisor</button>
-                </div><p className="text-[10px] text-white/20 text-center mt-4">Powered by <strong>Vitalis OS</strong></p></div>
-            </GlassCard>
-        </div>
-    );
-};
 
 // --- MÓDULO DE INOVAÇÃO: VITALIS COPILOT (SUPER FUNCIONÁRIO) ---
 const VitalisCopilot = ({ setView, role }) => {
@@ -2233,6 +2440,7 @@ const VitalisCopilot = ({ setView, role }) => {
 const Dashboard = ({ user, role, currentTenant, onChangeTenant, onLogout, marketProducts, setMarketProducts }) => {
     const [view, setView] = useState('home');
     const [activeBranch, setActiveBranch] = useState(currentTenant.branches[0]);
+    const [mostrarCalculadora, setMostrarCalculadora] = useState(false);
     const [showMobileMenu, setShowMobileMenu] = useState(false); // Estado do Menu
     const [chatContext, setChatContext] = useState(null);
     const Logo = currentTenant.logo;
@@ -2309,6 +2517,8 @@ const Dashboard = ({ user, role, currentTenant, onChangeTenant, onLogout, market
                             {view === 'trading' && <TradingView role={role}/>}
                             {view === 'expedicao' && <ExpedicaoView />}
                             {view === 'logistica' && <LogisticaView />}
+                            {view === 'precision' && <PrecisionAgView />}
+                            {view === 'cattle' && <CattleView />}
                             {view === 'financeiro' && (role === 'Produtor' ? <CobreancaView /> : <FinanceiroCompleto role={role} />)}
                             {view === 'admin_finance' && <FinanceiroCompleto role={role} />}
                             {view === 'cobranca' && <CobreancaView />}
@@ -2375,18 +2585,87 @@ const Dashboard = ({ user, role, currentTenant, onChangeTenant, onLogout, market
         </div>
     );
 };
+
+// --- INICIO DO NOVO COMPONENTE DE LOGIN (TECH) ---
+const TechLoginScreen = ({ onLogin, onDemoLogin }) => {
+  const [email, setEmail] = React.useState('');
+  const [password, setPassword] = React.useState('');
+
+  const quickAccessUsers = [
+    { id: '1', role: 'Everton', color: 'border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10' },
+    { id: '2', role: 'Ricardo', color: 'border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10' },
+    { id: '3', role: 'Operador', color: 'border-blue-500/30 text-blue-400 hover:bg-blue-500/10' },
+    { id: '4', role: 'Produtor', color: 'border-amber-500/30 text-amber-400 hover:bg-amber-500/10' },
+    { id: '5', role: 'Estoque', color: 'border-purple-500/30 text-purple-400 hover:bg-purple-500/10' },
+    { id: '6', role: 'Agrônomo', color: 'border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10' },
+    { id: '7', role: 'Nutrição', color: 'border-rose-500/30 text-rose-400 hover:bg-rose-500/10' },
+    { id: '8', role: 'Admin', color: 'border-red-500/30 text-red-400 hover:bg-red-500/10' },
+    { id: '9', role: 'Motorista', color: 'border-orange-500/30 text-orange-400 hover:bg-orange-500/10' },
+    { id: '10', role: 'Segurança', color: 'border-gray-500/30 text-gray-400 hover:bg-gray-500/10' },
+    { id: '11', role: 'Supervisor', color: 'border-indigo-500/30 text-indigo-400 hover:bg-indigo-500/10' },
+  ];
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onLogin(email, password);
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-950 flex relative overflow-hidden font-sans selection:bg-emerald-500 selection:text-white">
+      <div className="absolute inset-0 z-0 pointer-events-none">
+        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=2072&auto=format&fit=crop')] bg-cover bg-center opacity-20 mix-blend-overlay"></div>
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]"></div>
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-emerald-500/10 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/3"></div>
+        <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-amber-500/10 rounded-full blur-[100px] translate-y-1/2 -translate-x-1/3"></div>
+      </div>
+
+      <div className="hidden lg:flex lg:w-1/2 relative z-10 flex-col justify-between p-16 border-r border-white/5 bg-slate-900/40 backdrop-blur-sm">
+        <div>
+           <div className="flex items-center gap-4 mb-6">
+              <div className="bg-emerald-500/10 p-2 rounded-lg border border-emerald-500/20"><Leaf className="w-8 h-8 text-emerald-400" /></div>
+              <div className="h-8 w-[1px] bg-white/10"></div>
+              <Building2 className="w-8 h-8 text-amber-400" />
+           </div>
+           <h1 className="text-5xl font-bold text-white tracking-tight leading-tight">O futuro do <br/><span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-emerald-200">Agronegócio</span> <br/>começa aqui.</h1>
+           <p className="text-slate-400 mt-6 text-lg max-w-md leading-relaxed">Gestão, monitoramento via satélite e soluções financeiras integradas.</p>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="p-4 rounded-xl bg-white/5 border border-white/5 backdrop-blur-md"><div className="flex items-center gap-2 mb-1 text-emerald-400"><Globe2 className="w-4 h-4" /> <span className="text-xs font-bold uppercase">Volume</span></div><div className="text-2xl font-bold text-white">R$ 2.4bi</div></div>
+          <div className="p-4 rounded-xl bg-white/5 border border-white/5 backdrop-blur-md"><div className="flex items-center gap-2 mb-1 text-amber-400"><ShieldCheck className="w-4 h-4" /> <span className="text-xs font-bold uppercase">Produtores</span></div><div className="text-2xl font-bold text-white">+5.000</div></div>
+        </div>
+      </div>
+
+      <div className="w-full lg:w-1/2 flex flex-col items-center justify-center p-6 z-20">
+        <div className="w-full max-w-md space-y-6 animate-in slide-in-from-bottom-5 duration-700">
+          <div className="lg:hidden flex justify-center items-center gap-3 mb-6"><Leaf className="w-8 h-8 text-emerald-500" /><span className="text-slate-600">×</span><Building2 className="w-8 h-8 text-amber-400" /></div>
+          <div className="text-center lg:text-left"><h2 className="text-3xl font-bold text-white">Acesse sua conta</h2><p className="text-slate-400 text-sm mt-1">Credenciais corporativas Cotribá</p></div>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-3">
+              <div className="relative group"><div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><User className="h-5 w-5 text-slate-500 group-focus-within:text-emerald-400 transition-colors" /></div><input type="text" value={email} onChange={(e) => setEmail(e.target.value)} className="block w-full pl-10 pr-3 py-3 bg-slate-900/60 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all" placeholder="ID ou Email" /></div>
+              <div className="relative group"><div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><Lock className="h-5 w-5 text-slate-500 group-focus-within:text-emerald-400 transition-colors" /></div><input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="block w-full pl-10 pr-3 py-3 bg-slate-900/60 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all" placeholder="Senha" /></div>
+            </div>
+            <button type="submit" className="w-full flex items-center justify-center py-3.5 px-4 rounded-xl shadow-lg shadow-amber-500/20 text-slate-900 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 focus:outline-none font-bold transition-all transform active:scale-[0.98]">ACESSAR SISTEMA <ChevronRight className="ml-2 w-4 h-4" /></button>
+          </form>
+          <div className="relative my-6"><div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-800"></div></div><div className="relative flex justify-center"><span className="px-3 bg-slate-950 text-xs text-slate-500 uppercase flex items-center gap-1"><LayoutGrid className="w-3 h-3" /> Acesso Rápido (Demo)</span></div></div>
+          <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">{quickAccessUsers.map((user) => (<button key={user.id} onClick={() => onDemoLogin(user.id)} className={`px-1 py-2 rounded-lg border bg-slate-900/50 text-[10px] sm:text-xs font-medium uppercase transition-all hover:scale-105 active:scale-95 flex flex-col items-center justify-center gap-1 ${user.color}`}>{user.role}</button>))}</div>
+          <div className="text-center pt-4"><p className="text-[10px] text-slate-600 font-mono">Powered by Vitalis OS v2.4 • Secured by Stark Bank</p></div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function App() {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
     const [authError, setAuthError] = useState(null);
 
-    // Estado GLOBAL de produtos (Híbrido)
+    // Estado GLOBAL de produtos
     const [marketProducts, setMarketProducts] = useState([
         { id: 1, name: "Adubo NPK 10-10-10", unit: "Ton", img: "🌱", type: 'consult', promo: true, tag: "Insumos", stock: true, desc: "Fertilizante mineral.", price: 0 },
         { id: 2, name: "Herbicida Glyphosate", unit: "Litro", img: "🧪", type: 'consult', promo: false, tag: "Químicos", stock: true, desc: "Controle de plantas.", price: 0 },
         { id: 3, name: "Botina Segurança", unit: "Par", img: "🥾", type: 'retail', promo: false, tag: "EPI", stock: true, desc: "Couro legítimo.", price: 149.90 },
         { id: 4, name: "Semente Trigo", unit: "Sc", img: "🌾", type: 'consult', promo: false, tag: "Sementes", stock: true, desc: "Alta produtividade.", price: 0 },
-        // Novos produtos de Nutrição
         { id: 5, name: "Tamponada 22%", unit: "Sc", img: "🐄", type: 'retail', promo: true, tag: "Nutrição", stock: true, desc: "Alta performance.", price: 95.00 },
         { id: 6, name: "Destete 18%", unit: "Sc", img: "🐂", type: 'retail', promo: false, tag: "Nutrição", stock: true, desc: "Crescimento.", price: 82.50 },
         { id: 7, name: "Bovino de Corte 140", unit: "Sc", img: "🥩", type: 'retail', promo: false, tag: "Nutrição", stock: true, desc: "Engorda rápida.", price: 78.00 },
@@ -2394,9 +2673,68 @@ export default function App() {
         { id: 9, name: "Fosfosal 500ml", unit: "Frasco", img: "💉", type: 'retail', promo: false, tag: "Nutrição", stock: true, desc: "Suplemento injetável.", price: 45.90 }
     ]);
 
-    useEffect(() => { if(!auth) { setLoading(false); return; } const init = async () => { try { if(initialAuthToken) await signInWithCustomToken(auth, initialAuthToken); else await signInAnonymously(auth); } catch(e) {} }; if(!user) init(); return onAuthStateChanged(auth, u => { setUser(u); setLoading(false); }); }, []);
-    const handleLogin = async (email, pass, isRegister) => { setLoading(true); setAuthError(null); try { if(isRegister) await createUserWithEmailAndPassword(auth, email, pass); else await signInWithEmailAndPassword(auth, email, pass); } catch(e) { setAuthError(e.message); setLoading(false); } };
+    useEffect(() => { 
+        if(!auth) { setLoading(false); return; } 
+        const unsubscribe = onAuthStateChanged(auth, u => { setUser(u); setLoading(false); });
+        return () => unsubscribe();
+    }, []);
 
-    if (!user) return <LoginScreen onLogin={handleLogin} loading={loading} error={authError} />;
-    return <Dashboard user={user} role={getUserRole(user.email)} currentTenant={tenants['cotriba']} onChangeTenant={() => {}} onLogout={() => signOut(auth)} marketProducts={marketProducts} setMarketProducts={setMarketProducts} />;
+    const handleLogin = async (email, pass) => { 
+        setLoading(true); setAuthError(null); 
+        try { 
+            await signInWithEmailAndPassword(auth, email, pass); 
+        } catch(e) { 
+            setAuthError(e.message); setLoading(false); 
+        } 
+    };
+
+    // --- FUNÇÃO DE LOGIN DEMO (AGORA EXISTE!) ---
+    const handleLoginDemo = (userId) => {
+        const demoUsers = {
+            '1': { email: 'everton@cotriba.com.br', displayName: 'Everton' },
+            '2': { email: 'ricardo@cotriba.com.br', displayName: 'Ricardo' },
+            '3': { email: 'operador@cotriba.com.br', displayName: 'Operador' },
+            '4': { email: 'produtor@cotriba.com.br', displayName: 'Produtor' },
+            '5': { email: 'estoquista@cotriba.com.br', displayName: 'Estoque' },
+            '6': { email: 'agronomo@cotriba.com.br', displayName: 'Agrônomo' },
+            '7': { email: 'nutricao@cotriba.com.br', displayName: 'Nutrição' },
+            '8': { email: 'admin@cotriba.com.br', displayName: 'Admin' },
+            '9': { email: 'motorista@cotriba.com.br', displayName: 'Motorista' },
+            '10': { email: 'seguranca@cotriba.com.br', displayName: 'Segurança' },
+            '11': { email: 'supervisor@cotriba.com.br', displayName: 'Supervisor' },
+        };
+
+        const mockUser = demoUsers[userId];
+        if (mockUser) {
+            // Simula um objeto de usuário do Firebase
+            setUser({ 
+                uid: `demo_${userId}`, 
+                email: mockUser.email, 
+                displayName: mockUser.displayName,
+                getIdToken: () => Promise.resolve('demo-token')
+            });
+        }
+    };
+
+    if (loading) return <div className="h-screen bg-slate-900 flex items-center justify-center text-white">Carregando...</div>;
+
+    if (!user) {
+        return (
+            <TechLoginScreen 
+                onLogin={handleLogin} 
+                onDemoLogin={handleLoginDemo} 
+            />
+        );
+    }
+
+    return (
+        <Dashboard 
+            user={user} 
+            role={getUserRole(user.email)} 
+            currentTenant={tenants['cotriba']} 
+            onLogout={() => signOut(auth).catch(() => setUser(null))} 
+            marketProducts={marketProducts} 
+            setMarketProducts={setMarketProducts} 
+        />
+    );
 }
