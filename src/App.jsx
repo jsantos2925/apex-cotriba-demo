@@ -5,7 +5,6 @@ import { initializeApp } from 'firebase/app';
 import { getAuth, signInWithCustomToken, signOut, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 import { getFirestore, collection, onSnapshot, query, orderBy, limit, addDoc, serverTimestamp } from 'firebase/firestore';
 import { 
-  // Ícones Consolidados
   Home, Package, MessageCircle, Wallet, User, LogOut, Loader, Camera, Send, Leaf, Building2, 
   AlertTriangle, MapPin, Search, ShieldCheck, ShoppingCart, FileText, Truck, Cloud,
   CreditCard, Wind, Droplets, CheckCircle, Tractor, Sprout, Clock, Trash2, Menu, Play, Pause, Paperclip, 
@@ -13,7 +12,8 @@ import {
   Lock, Mail, FileSignature, QrCode, Gavel, Scale, ScanEye, Users, Siren, PieChart, LineChart,
   Hash, Download, BoxSelect, Wrench, Split, Landmark, FileUp, RefreshCw, Check, Newspaper, ChevronRight, LayoutGrid, Globe2, 
   Bell, Database, Layers, Coffee, Wheat, ChevronDown, Smartphone, UserCheck, PlusCircle, Gauge, Signal, Fuel, Map, 
-  LockKeyhole, Pill, Banknote, Milk, Users2, HardHat, ShieldAlert, MessageSquare, Navigation, FileBarChart, PackageCheck, History, AlertCircle, Calendar, Briefcase, Sparkles, ArrowRight, X, Repeat
+  LockKeyhole, Pill, Banknote, Milk, Users2, HardHat, ShieldAlert, MessageSquare, Navigation, FileBarChart, PackageCheck, History, AlertCircle, Calendar, Briefcase, Sparkles, ArrowRight, X, Repeat,
+  ArrowUpRight, ArrowDownLeft, DollarSign, Barcode, Unlock, Zap
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { twMerge } from 'tailwind-merge';
@@ -1322,7 +1322,28 @@ const CommunityView = ({ userEmail }) => <ChatModule title="Comunidade" subtitle
 const AgriNewsWidget = () => <GlassCard className="col-span-full border-t-4 border-blue-400 p-4"><h3 className="text-lg font-bold mb-2 text-white"><Newspaper/> Notícias</h3></GlassCard>;
 const WeatherWidget = () => <GlassCard className="col-span-full md:col-span-1 bg-gradient-to-br from-blue-900/40 to-slate-900/40"><h3 className="text-5xl font-black mt-2 text-white">28°</h3></GlassCard>;
 const TaskWidget = ({onClick}) => <GlassCard onClick={onClick} className="col-span-full md:col-span-1 cursor-pointer hover:border-emerald-500/50"><h3 className="text-2xl font-bold text-white">3 Tarefas</h3></GlassCard>;
-const FinanceWidget = ({onClick}) => <GlassCard onClick={onClick} className="col-span-full md:col-span-1 cursor-pointer hover:border-red-500/50"><h3 className="text-2xl font-bold text-white">R$ 15k</h3><p className="text-white/50">A vencer</p></GlassCard>;
+const FinanceWidget = ({onClick}) => (
+    <GlassCard onClick={onClick} className="col-span-full md:col-span-1 cursor-pointer hover:border-emerald-500/50 group">
+        <div className="flex justify-between items-start">
+            <div>
+                <h3 className="text-2xl font-bold text-white">R$ 145k</h3>
+                <p className="text-white/50 text-xs flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"/> Conta Digital
+                </p>
+            </div>
+            <div className="bg-emerald-500/20 p-2 rounded-lg text-emerald-400 group-hover:bg-emerald-500 group-hover:text-white transition">
+                <Landmark size={20}/>
+            </div>
+        </div>
+        <div className="mt-3 pt-3 border-t border-white/10 flex justify-between items-center">
+            <span className="text-[10px] text-blue-300 font-bold flex items-center gap-1">
+                <Tractor size={10}/> Limite subiu hoje
+            </span>
+            <ArrowRight size={14} className="text-white/30"/>
+        </div>
+    </GlassCard>
+);
+
 // 3. MÓDULO GRÃOS (DETALHADO E TRANSPARENTE)
 const GrainWalletView = () => {
     const [filter, setFilter] = useState('Todos');
@@ -2220,6 +2241,218 @@ const CattleView = () => { // <--- MUDA AQUI: Troquei o "(" por "{"
     </div>
   );
 }
+// --- VITALIS BANK (VERSÃO PREMIUM BLACK - FINAL) ---
+const VitalisBankView = () => {
+  const [saldoVisivel, setSaldoVisivel] = useState(true);
+
+  // DADOS MOCK (Simulação para a Reunião)
+  const user = { name: "Valdir S.", account: "9982-1", agency: "0001" };
+  
+  const finances = {
+    saldoReais: 145820.50,
+    saldoSoja: 5400, // Sacas
+    faturaAtual: 12450.90
+  };
+
+  // O "Pulo do Gato": A transação que mostra a tecnologia
+  const lastRomaneio = {
+    id: "#99821",
+    data: "Hoje, 14:30",
+    desc: "Entrega Soja (Faz. Santa Rita)",
+    qtd: "850 sc",
+    valorLiberado: 114750.00, // 850 * 135
+    status: "Convertido em Limite"
+  };
+
+  return (
+    <div className="space-y-8 animate-in fade-in pb-24">
+      
+      {/* 1. CABEÇALHO BANCÁRIO (PERFIL) */}
+      <div className="flex justify-between items-center px-2">
+        <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-amber-400 to-yellow-600 flex items-center justify-center font-bold text-black shadow-lg shadow-amber-500/20">
+                {user.name.charAt(0)}
+            </div>
+            <div>
+                <p className="text-xs text-slate-400">Bem-vindo ao Vitalis Bank</p>
+                <h3 className="font-bold text-white text-lg">{user.name}</h3>
+            </div>
+        </div>
+        <div className="flex gap-4">
+            <button onClick={() => setSaldoVisivel(!saldoVisivel)} className="text-white/50 hover:text-white transition">
+                {saldoVisivel ? <ScanEye size={22}/> : <LockKeyhole size={22}/>}
+            </button>
+            <Bell size={22} className="text-white/50 hover:text-white transition"/>
+        </div>
+      </div>
+
+      {/* 2. ÁREA DE SALDOS (MOEDA DUPLA) */}
+      <div className="grid grid-cols-2 gap-4">
+          <GlassCard className="py-4 px-5 border-l-4 border-emerald-500 bg-gradient-to-br from-emerald-900/40 to-black/40">
+              <p className="text-xs text-emerald-400 font-bold uppercase tracking-wider mb-1 flex items-center gap-1"><Landmark size={12}/> Conta Corrente</p>
+              <h2 className="text-2xl font-bold text-white truncate">
+                  {saldoVisivel ? formatCurrency(finances.saldoReais) : "R$ ••••••"}
+              </h2>
+              <p className="text-[10px] text-white/40 mt-1">Rendimento: 100% CDI</p>
+          </GlassCard>
+
+          <GlassCard className="py-4 px-5 border-l-4 border-amber-500 bg-gradient-to-br from-amber-900/40 to-black/40">
+              <p className="text-xs text-amber-400 font-bold uppercase tracking-wider mb-1 flex items-center gap-1"><Wheat size={12}/> Conta Grãos</p>
+              <h2 className="text-2xl font-bold text-white truncate">
+                  {saldoVisivel ? finances.saldoSoja.toLocaleString() : "••••"} <span className="text-sm font-normal">sc</span>
+              </h2>
+              <p className="text-[10px] text-white/40 mt-1">Liq. Imediata: R$ {saldoVisivel ? ((finances.saldoSoja * 135).toLocaleString('pt-BR', { notation: "compact" })) : "•••"}</p>
+          </GlassCard>
+      </div>
+
+      {/* 3. O CARTÃO BLACK (VISUAL PREMIUM) */}
+      <div className="relative group perspective-1000">
+          <div className="w-full h-56 rounded-3xl bg-gradient-to-bl from-slate-800 via-black to-slate-900 border border-white/10 shadow-2xl relative overflow-hidden transition-transform duration-500 hover:scale-[1.02]">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
+              <div className="absolute bottom-0 left-0 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl -ml-16 -mb-16 pointer-events-none"></div>
+              
+              <div className="p-6 flex flex-col justify-between h-full relative z-10">
+                  <div className="flex justify-between items-start">
+                      <div className="flex items-center gap-2">
+                          <Wheat className="text-amber-400" size={24}/>
+                          <span className="font-bold text-white tracking-widest text-lg italic">VITALIS<span className="text-amber-400">BLACK</span></span>
+                      </div>
+                      <span className="text-white/30 font-mono text-sm">Cotribá Infinite</span>
+                  </div>
+
+                  <div className="flex items-center gap-4">
+                      <div className="w-12 h-9 bg-gradient-to-br from-yellow-200 to-yellow-500 rounded-md shadow-inner flex items-center justify-center border border-yellow-600/50">
+                          <div className="w-8 h-6 border border-black/20 rounded opacity-50 grid grid-cols-2 gap-px"></div>
+                      </div>
+                      <Signal className="text-white/50 rotate-90" size={20}/>
+                  </div>
+
+                  <div>
+                      <p className="font-mono text-white text-lg tracking-widest shadow-black drop-shadow-md">
+                          {saldoVisivel ? "5502 4491 8821 0092" : "•••• •••• •••• 0092"}
+                      </p>
+                      <div className="flex justify-between items-end mt-4">
+                          <div>
+                              <p className="text-[8px] text-white/40 uppercase tracking-widest">Titular</p>
+                              <p className="text-white font-medium tracking-wide">{user.name.toUpperCase()}</p>
+                          </div>
+                          <div>
+                              <p className="text-[8px] text-white/40 uppercase tracking-widest">Validade</p>
+                              <p className="text-white font-medium">12/29</p>
+                          </div>
+                          <div className="h-8 w-12 bg-white/10 rounded flex items-center justify-center text-[8px] text-white/50">MASTERCARD</div>
+                      </div>
+                  </div>
+              </div>
+          </div>
+          
+          <div className="flex justify-between items-center px-4 mt-3">
+              <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-blue-400 animate-pulse"/>
+                  <p className="text-xs text-blue-300">Fatura Aberta</p>
+              </div>
+              <p className="text-white font-bold">{formatCurrency(finances.faturaAtual)}</p>
+          </div>
+      </div>
+
+      {/* 4. AÇÕES RÁPIDAS */}
+      <div>
+          <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2">
+              {[
+                  { label: "Pix", icon: <ArrowUpRight/>, color: "bg-emerald-600" },
+                  { label: "Pagar", icon: <Barcode/>, color: "bg-white/10" },
+                  { label: "Transferir", icon: <ArrowDownLeft/>, color: "bg-white/10" },
+                  { label: "Recarga", icon: <Smartphone/>, color: "bg-white/10" },
+                  { label: "Cobrar", icon: <DollarSign/>, color: "bg-white/10" },
+                  { label: "Extrato", icon: <FileText/>, color: "bg-white/10" },
+              ].map((act, i) => (
+                  <button key={i} className="flex flex-col items-center gap-2 min-w-[70px] group">
+                      <div className={`w-16 h-16 rounded-full flex items-center justify-center text-white text-xl shadow-lg border border-white/5 transition-transform group-hover:scale-105 ${act.color}`}>
+                          {act.icon}
+                      </div>
+                      <span className="text-xs text-white/70 font-medium">{act.label}</span>
+                  </button>
+              ))}
+          </div>
+      </div>
+
+      {/* 5. A PROVA DE CONCEITO (ROMANEIO -> LIMITE) */}
+      <div className="relative">
+          <h3 className="font-bold text-white mb-3 flex items-center gap-2">
+              <Activity className="text-blue-400"/> Última Atividade
+          </h3>
+          <GlassCard className="border-l-4 border-blue-500 relative overflow-hidden">
+              <div className="absolute right-0 top-0 p-3 opacity-10"><Truck size={80}/></div>
+              <div className="relative z-10">
+                  <div className="flex justify-between items-start mb-2">
+                      <div>
+                          <span className="bg-blue-500/20 text-blue-300 text-[10px] font-bold px-2 py-1 rounded border border-blue-500/30">
+                              ROMANEIO AUTOMÁTICO
+                          </span>
+                          <h4 className="text-white font-bold text-lg mt-2">{lastRomaneio.desc}</h4>
+                          <p className="text-xs text-white/50">{lastRomaneio.data} • Doc: {lastRomaneio.id}</p>
+                      </div>
+                      <div className="text-right">
+                          <p className="text-xs text-white/50 uppercase">Volume</p>
+                          <p className="text-xl font-bold text-white">{lastRomaneio.qtd}</p>
+                      </div>
+                  </div>
+                  
+                  <div className="bg-black/40 rounded-xl p-3 mt-3 border border-white/10 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                          <div className="p-2 bg-green-500/20 rounded-full text-green-400">
+                              <Unlock size={20}/>
+                          </div>
+                          <div>
+                              <p className="text-[10px] text-white/50 uppercase">Limite Liberado</p>
+                              <p className="text-green-400 font-bold text-lg">+ {formatCurrency(lastRomaneio.valorLiberado)}</p>
+                          </div>
+                      </div>
+                      <button className="text-xs bg-green-600 text-white px-3 py-2 rounded-lg font-bold shadow-lg hover:bg-green-500 transition">
+                          Usar Agora
+                      </button>
+                  </div>
+              </div>
+          </GlassCard>
+      </div>
+
+      {/* 6. OFERTAS DE CRÉDITO */}
+      <div>
+          <h3 className="font-bold text-white mb-3 flex items-center gap-2">
+              <Sprout className="text-green-400"/> Custeio & Investimento
+          </h3>
+          <div className="flex gap-4 overflow-x-auto no-scrollbar pb-4">
+              <GlassCard className="min-w-[280px] bg-gradient-to-br from-green-900/40 to-black border-green-500/30">
+                  <div className="flex justify-between items-start mb-4">
+                      <div className="p-2 bg-green-500/20 rounded-lg text-green-400"><Leaf size={24}/></div>
+                      <span className="text-[10px] bg-white/10 px-2 py-1 rounded text-white">Pré-Aprovado</span>
+                  </div>
+                  <h4 className="font-bold text-white text-lg">Custeio Safra 25/26</h4>
+                  <p className="text-xs text-white/50 mt-1 mb-4">Insumos Cotribá com taxa zero na originação.</p>
+                  <div className="flex justify-between items-end border-t border-white/10 pt-3">
+                      <div><p className="text-[10px] text-white/40">Limite Disponível</p><p className="text-white font-bold text-lg">R$ 1.500.000</p></div>
+                      <button className="text-xs text-green-400 font-bold uppercase hover:text-green-300">Simular &rarr;</button>
+                  </div>
+              </GlassCard>
+
+              <GlassCard className="min-w-[280px] bg-gradient-to-br from-yellow-900/40 to-black border-yellow-500/30">
+                  <div className="flex justify-between items-start mb-4">
+                      <div className="p-2 bg-yellow-500/20 rounded-lg text-yellow-400"><Zap size={24}/></div>
+                      <span className="text-[10px] bg-white/10 px-2 py-1 rounded text-white">Investimento</span>
+                  </div>
+                  <h4 className="font-bold text-white text-lg">Energia Solar</h4>
+                  <p className="text-xs text-white/50 mt-1 mb-4">Reduza sua conta de luz na granja.</p>
+                  <div className="flex justify-between items-end border-t border-white/10 pt-3">
+                      <div><p className="text-[10px] text-white/40">Carência</p><p className="text-white font-bold text-lg">12 meses</p></div>
+                      <button className="text-xs text-yellow-400 font-bold uppercase hover:text-yellow-300">Simular &rarr;</button>
+                  </div>
+              </GlassCard>
+          </div>
+      </div>
+    </div>
+  );
+};
+
 const ProducerHome = ({ setView }) => (
     <div className="space-y-6 animate-in fade-in">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -2436,12 +2669,12 @@ const VitalisCopilot = ({ setView, role }) => {
 };
 
 
-// --- MAIN DASHBOARD (COM MENU MOBILE CORRIGIDO) ---
+// --- MAIN DASHBOARD (COM MENU MOBILE E ROTEAMENTO CORRIGIDOS) ---
 const Dashboard = ({ user, role, currentTenant, onChangeTenant, onLogout, marketProducts, setMarketProducts }) => {
     const [view, setView] = useState('home');
     const [activeBranch, setActiveBranch] = useState(currentTenant.branches[0]);
     const [mostrarCalculadora, setMostrarCalculadora] = useState(false);
-    const [showMobileMenu, setShowMobileMenu] = useState(false); // Estado do Menu
+    const [showMobileMenu, setShowMobileMenu] = useState(false);
     const [chatContext, setChatContext] = useState(null);
     const Logo = currentTenant.logo;
 
@@ -2474,72 +2707,111 @@ const Dashboard = ({ user, role, currentTenant, onChangeTenant, onLogout, market
         return { stock: '1.500 Ton', sales: 'R$ 120k', trucks: 2 };
     }, [activeBranch]);
 
+    // --- ROTEADOR DE TELAS (CORRIGIDO) ---
+    const renderContent = () => {
+        switch (view) {
+            // Home (AQUI ESTAVA O ERRO: Trocamos HomeView por SmartHome)
+            case 'home': return <SmartHome role={role} setView={setView} branchData={branchData} activeBranch={activeBranch} />;
+            
+            // --- Banco Vitalis (Cartão Black) ---
+            case 'financeiro': return <VitalisBankView />;
+            
+            // --- Pecuária e Lavoura ---
+            case 'cattle': return <CattleView />;
+            case 'precision': return <PrecisionAgView />;
+            case 'agrilens': return <AgriLensView setView={setView} setChatContext={setChatContext}/>;
+            case 'receituario': return <ReceituarioView />;
+            case 'nutricao': return <NutricaoView products={marketProducts} />;
+            
+            // --- Comercial e Loja ---
+            case 'venda_direta': return <DirectSalesView products={marketProducts} role={role} />;
+            case 'marketplace': return <MarketplaceView goToChat={() => setView('chat')} products={marketProducts} setView={setView} setChatContext={setChatContext} />;
+            case 'trading': return <TradingView role={role}/>;
+            case 'pool': return <PoolView />;
+            case 'price_update': return <PriceUpdateView products={marketProducts} setProducts={setMarketProducts} />;
+            
+            // --- Operacional e Logística ---
+            case 'estoque': return <EstoqueView role={role} activeBranch={activeBranch} />;
+            case 'expedicao': return <ExpedicaoView />;
+            case 'logistica': return <LogisticaView />;
+            case 'safety': return <SafetyView setView={setView} role={role} activeBranch={activeBranch} />;
+            case 'telemetry': return <TelemetryView role={role} />;
+            
+            // --- Administrativo e Relacionamento ---
+            case 'admin_finance': return <FinanceiroCompleto role={role} />;
+            case 'cobranca': return <CobreancaView />;
+            case 'grains': return <GrainWalletView />;
+            case 'comunidade': return <CommunityView userEmail={user.email} />;
+            case 'chat': return <ChatModule title="Suporte Técnico" subtitle="Online agora" userEmail={user.email} role={role} chatContext={chatContext} setChatContext={setChatContext}/>;
+            case 'team_chat': return <ChatModule title="Chat Interno" subtitle="Equipe" />;
+            case 'crm': return <CRMView />;
+            case 'relatorios': return <RelatoriosView />;
+            
+            // Default (Também corrigido para SmartHome)
+            default: return <SmartHome role={role} setView={setView} branchData={branchData} activeBranch={activeBranch} />;
+        }
+    };
+
     return (
         <div className={`min-h-screen bg-gradient-to-br ${currentTenant.colors.gradient} text-white font-sans flex transition-all duration-1000`}>
-            <div className="fixed inset-0 z-0 pointer-events-none"><img src={currentTenant.bg_image} className="absolute inset-0 w-full h-full object-cover opacity-20" alt="bg"/><div className="absolute inset-0 bg-black/60"/><div className="absolute bottom-8 right-8 opacity-10"><Logo size={400}/></div></div>
+            <div className="fixed inset-0 z-0 pointer-events-none">
+                <img src={currentTenant.bg_image} className="absolute inset-0 w-full h-full object-cover opacity-20" alt="bg"/>
+                <div className="absolute inset-0 bg-black/60"/>
+                <div className="absolute bottom-8 right-8 opacity-10"><Logo size={400}/></div>
+            </div>
             
             {/* SIDEBAR (DESKTOP) */}
             <aside className={`w-20 ${currentTenant.colors.sidebar} border-r border-white/10 flex flex-col items-center py-6 gap-6 hidden md:flex relative z-20 backdrop-blur-xl`}>
                 <div className={`p-3 bg-white/10 rounded-xl ${currentTenant.colors.primary.replace('bg-', 'text-')}`}><Logo size={28}/></div>
-                <nav className="flex-1 flex flex-col gap-4 w-full px-2">{menu.map(item => (<button key={item.id} onClick={() => setView(item.id)} className={twMerge("p-3 rounded-xl transition-all flex justify-center group relative", view === item.id ? "bg-white/20 text-white" : "text-white/40 hover:text-white hover:bg-white/5")} title={item.label}><item.icon size={22}/></button>))}</nav><button onClick={onLogout} className="p-3 text-white/30 hover:text-red-400 transition"><LogOut size={22}/></button>
+                <nav className="flex-1 flex flex-col gap-4 w-full px-2">
+                    {menu.map(item => (
+                        <button key={item.id} onClick={() => setView(item.id)} className={twMerge("p-3 rounded-xl transition-all flex justify-center group relative", view === item.id ? "bg-white/20 text-white" : "text-white/40 hover:text-white hover:bg-white/5")} title={item.label}>
+                            <item.icon size={22}/>
+                        </button>
+                    ))}
+                </nav>
+                <button onClick={onLogout} className="p-3 text-white/30 hover:text-red-400 transition"><LogOut size={22}/></button>
             </aside>
 
             {/* ÁREA PRINCIPAL */}
             <main className="flex-1 flex flex-col h-screen overflow-hidden relative z-10">
                 {/* LÓGICA DE PERMISSÃO REGIONAL ATUALIZADA */}
-{(role === 'Admin' || role === 'Coord. Regional' || role === 'Téc. Segurança') && (
-    <div className="hidden md:flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-lg border border-white/10 hover:bg-white/20 transition">
-        <MapPin size={14} className={currentTenant.colors.accent.replace('text-', 'text-')}/>
-        <select 
-            value={activeBranch} 
-            onChange={(e) => setActiveBranch(e.target.value)} 
-            className="bg-transparent text-xs font-bold text-white outline-none appearance-none cursor-pointer [&>option]:bg-slate-900 pr-2 min-w-[120px]"
-        >
-            {currentTenant.branches.map(b => <option key={b} value={b}>{b}</option>)}
-        </select>
-        <ChevronDown size={12} className="text-white/50"/>
-    </div>
-)}
-{/* --- VITALIS COPILOT (APENAS PARA FUNCIONÁRIOS) --- */}
-            {role !== 'Produtor' && (
-                <VitalisCopilot setView={setView} role={role} />
-            )} 
-               
+                {(role === 'Admin' || role === 'Coord. Regional' || role === 'Téc. Segurança') && (
+                    <div className="hidden md:flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-lg border border-white/10 hover:bg-white/20 transition absolute top-6 right-6 z-50">
+                        <MapPin size={14} className={currentTenant.colors.accent.replace('text-', 'text-')}/>
+                        <select 
+                            value={activeBranch} 
+                            onChange={(e) => setActiveBranch(e.target.value)} 
+                            className="bg-transparent text-xs font-bold text-white outline-none appearance-none cursor-pointer [&>option]:bg-slate-900 pr-2 min-w-[120px]"
+                        >
+                            {currentTenant.branches.map(b => <option key={b} value={b}>{b}</option>)}
+                        </select>
+                        <ChevronDown size={12} className="text-white/50"/>
+                    </div>
+                )}
+
+                {/* --- VITALIS COPILOT (APENAS PARA FUNCIONÁRIOS) --- */}
+                {role !== 'Produtor' && (
+                    <VitalisCopilot setView={setView} role={role} />
+                )} 
+                
                 {/* CONTEÚDO ROLÁVEL COM PADDING PARA O MENU MOBILE */}
                 <div className="flex-1 overflow-y-auto p-6 pb-24">
                     <AnimatePresence mode="wait">
-                        <motion.div key={view + activeBranch} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }}>
-                            {view === 'venda_direta' && <DirectSalesView products={marketProducts} role={role} />}
-                            {view === 'home' && <SmartHome role={role} setView={setView} branchData={branchData} activeBranch={activeBranch} />}
-                            {view === 'estoque' && <EstoqueView userId={user.uid} inventory={[]} role={role} activeBranch={activeBranch} />}
-                            {view === 'agrilens' && <AgriLensView setView={setView} setChatContext={setChatContext}/>}
-                            {view === 'marketplace' && <MarketplaceView goToChat={() => setView('chat')} role={role} products={marketProducts} setView={setView} setChatContext={setChatContext}/>}
-                            {view === 'trading' && <TradingView role={role}/>}
-                            {view === 'expedicao' && <ExpedicaoView />}
-                            {view === 'logistica' && <LogisticaView />}
-                            {view === 'precision' && <PrecisionAgView />}
-                            {view === 'cattle' && <CattleView />}
-                            {view === 'financeiro' && (role === 'Produtor' ? <CobreancaView /> : <FinanceiroCompleto role={role} />)}
-                            {view === 'admin_finance' && <FinanceiroCompleto role={role} />}
-                            {view === 'cobranca' && <CobreancaView />}
-                            {view === 'grains' && <GrainWalletView />}
-                            {view === 'comunidade' && <CommunityView userEmail={user.email} />}
-                            {view === 'telemetry' && <TelemetryView />}
-                            {view === 'chat' && <ChatModule title="Suporte Técnico" subtitle="Online agora" userEmail={user.email} role={role} chatContext={chatContext} setChatContext={setChatContext}/>}
-                            {view === 'team_chat' && <ChatModule title="Chat Interno" subtitle="Equipe" />}
-                            {view === 'receituario' && <ReceituarioView />}
-                            {view === 'pool' && <PoolView />}
-                            {view === 'crm' && <CRMView />}
-                            {view === 'safety' && <SafetyView setView={setView} role={role} activeBranch={activeBranch} />}
-                            {view === 'relatorios' && <RelatoriosView />}
-                            {view === 'price_update' && <PriceUpdateView products={marketProducts} setProducts={setMarketProducts} />}
-                            {view === 'nutricao' && <NutricaoView products={marketProducts} />}
+                        <motion.div 
+                            key={view + activeBranch} 
+                            initial={{ opacity: 0, y: 10 }} 
+                            animate={{ opacity: 1, y: 0 }} 
+                            exit={{ opacity: 0, y: -10 }} 
+                            transition={{ duration: 0.2 }}
+                        >
+                            {renderContent()}
                         </motion.div>
                     </AnimatePresence>
                 </div>
             </main>
       
-            {/* --- GAVETA DE MENU MOBILE (CORRIGIDA) --- */}
+            {/* --- GAVETA DE MENU MOBILE --- */}
             <AnimatePresence>
                 {showMobileMenu && (
                     <motion.div 
@@ -2585,7 +2857,6 @@ const Dashboard = ({ user, role, currentTenant, onChangeTenant, onLogout, market
         </div>
     );
 };
-
 // --- INICIO DO NOVO COMPONENTE DE LOGIN (TECH) ---
 const TechLoginScreen = ({ onLogin, onDemoLogin }) => {
   const [email, setEmail] = React.useState('');
