@@ -26,7 +26,7 @@ import { twMerge } from 'tailwind-merge';
 // 1. CONFIGURAÇÃO (COLE SUAS CHAVES DO NOVO PROJETO AQUI)
 // ============================================================================
 
-const apiKey = "AIzaSyDuPdpI_ej6aXMeIBFGErf_iWFzB8u0jco"; // <--- SUA CHAVE GEMINI (IA)
+const apiKey = "AIzaSyDDNyTI1wdBHnZkrJV9aYC5ZvRAYk9fP14"; // <--- SUA CHAVE GEMINI (IA)
 
 const firebaseConfig = {
     apiKey: "AIzaSyCLZdof7ckXqiwK5Mn6i8-G73eCUTx-WNA",
